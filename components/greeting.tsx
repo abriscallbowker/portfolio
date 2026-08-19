@@ -7,8 +7,8 @@ import {useEffect, useState} from "react";
 const NAME = "I'm Alex BB.";
 
 export const greetingReveal = {
-  stagger: 0.05,
-  duration: 0.4,
+  stagger: 0.035,
+  duration: 0.3,
 } as const;
 
 function greetingForHour(hour: number) {

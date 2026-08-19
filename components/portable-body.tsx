@@ -15,35 +15,39 @@ type PortableImage = {
   };
 };
 
+function isEmptyBlock(block: unknown) {
+  if (!block || typeof block !== "object") return false;
+  const value = block as {_type?: string; children?: Array<{text?: string}>};
+  if (value._type !== "block") return false;
+  const text = (value.children ?? []).map((child) => child.text ?? "").join("");
+  return text.trim().length === 0;
+}
+
 const components: PortableTextComponents = {
   block: {
     normal: ({children}) => (
-      <p className="mb-3 text-body-md text-ink last:mb-0">{children}</p>
+      <p className="text-body-md text-ink">{children}</p>
     ),
     h2: ({children}) => (
-      <h2 className="mb-6 mt-10 text-heading-2 text-ink first:mt-0">
-        {children}
-      </h2>
+      <h2 className="mt-10 text-heading-2 text-ink first:mt-0">{children}</h2>
     ),
     h3: ({children}) => (
-      <h3 className="mb-5 mt-8 text-heading-3 text-ink first:mt-0">
-        {children}
-      </h3>
+      <h3 className="mt-8 text-heading-3 text-ink first:mt-0">{children}</h3>
     ),
     blockquote: ({children}) => (
-      <blockquote className="mb-5 border-l-2 border-border pl-4 text-body-md text-subdued">
+      <blockquote className="border-l-2 border-border pl-4 text-body-md text-subdued">
         {children}
       </blockquote>
     ),
   },
   list: {
     bullet: ({children}) => (
-      <ul className="mb-5 list-disc space-y-2 pl-6 text-body-md text-ink">
+      <ul className="list-disc space-y-2 pl-6 text-body-md text-ink">
         {children}
       </ul>
     ),
     number: ({children}) => (
-      <ol className="mb-5 list-decimal space-y-2 pl-6 text-body-md text-ink">
+      <ol className="list-decimal space-y-2 pl-6 text-body-md text-ink">
         {children}
       </ol>
     ),
@@ -73,7 +77,7 @@ const components: PortableTextComponents = {
       const height = dimensions?.height ?? 1000;
 
       return (
-        <figure className="my-10 overflow-hidden">
+        <figure className="overflow-hidden">
           <Image
             src={urlFor(value).width(1600).url()}
             alt={value.alt || ""}
@@ -92,5 +96,12 @@ const components: PortableTextComponents = {
 
 export function PortableBody({value}: {value: unknown}) {
   if (!Array.isArray(value) || value.length === 0) return null;
-  return <PortableText value={value} components={components} />;
+  const blocks = value.filter((block) => !isEmptyBlock(block));
+  if (blocks.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <PortableText value={blocks} components={components} />
+    </div>
+  );
 }

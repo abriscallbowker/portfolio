@@ -2,11 +2,25 @@
 
 import {AppearFade} from "@/components/appear";
 import {useGreetingReveal} from "@/components/greeting-reveal";
-import {appearFade} from "@/lib/motion";
+import {appearFade, tabSlide} from "@/lib/motion";
 import {LayoutRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
 import {AnimatePresence, motion} from "motion/react";
 import {useSelectedLayoutSegment} from "next/navigation";
 import {useContext, useEffect, useRef, useState, type ReactNode} from "react";
+
+const tabSlideVariants = {
+  enter: (direction: number) => ({opacity: 0, x: 32 * direction}),
+  center: {opacity: 1, x: 0},
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: -32 * direction,
+    pointerEvents: "none" as const,
+  }),
+};
+
+function tabIndex(segment: string | null) {
+  return segment === "about" ? 1 : 0;
+}
 
 function FrozenRouter({children}: {children: ReactNode}) {
   const context = useContext(LayoutRouterContext);
@@ -42,6 +56,16 @@ export function PageFade({children}: {children: ReactNode}) {
   const {played, ready} = useGreetingReveal();
   const [skipIntro] = useState(played);
   const segment = useSelectedLayoutSegment();
+  const index = tabIndex(segment);
+  const previousIndex = useRef(index);
+  const directionRef = useRef(1);
+
+  if (previousIndex.current !== index) {
+    directionRef.current = index > previousIndex.current ? 1 : -1;
+    previousIndex.current = index;
+  }
+
+  const direction = directionRef.current;
 
   useEffect(() => {
     window.scrollTo({top: 0, left: 0, behavior: "auto"});
@@ -55,15 +79,17 @@ export function PageFade({children}: {children: ReactNode}) {
       transition={appearFade}
       style={{pointerEvents: ready ? undefined : "none"}}
     >
-      <div className="grid w-full grid-cols-1 grid-rows-1">
-        <AnimatePresence mode="sync" initial={!skipIntro}>
+      <div className="grid w-full grid-cols-1 grid-rows-1 overflow-x-clip">
+        <AnimatePresence custom={direction} mode="sync" initial={false}>
           <motion.div
-            key={segment ?? "writing"}
+            key={segment ?? "archive"}
             className="col-start-1 row-start-1 w-full"
-            initial={{opacity: 0}}
-            animate={{opacity: 1}}
-            exit={{opacity: 0, pointerEvents: "none"}}
-            transition={{duration: 0.25, ease: [0.32, 0.72, 0, 1]}}
+            custom={direction}
+            variants={tabSlideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={tabSlide}
           >
             <FrozenRouter>{children}</FrozenRouter>
           </motion.div>

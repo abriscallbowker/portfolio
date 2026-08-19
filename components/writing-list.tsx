@@ -16,8 +16,8 @@ const textVariants = {
 };
 
 const coverVariants = {
-  rest: {scale: 0.5, opacity: 0},
-  hover: {scale: 1, opacity: 1},
+  rest: {scale: 0},
+  hover: {scale: 1},
 };
 
 export function WritingList({posts}: {posts: WritingListItem[]}) {

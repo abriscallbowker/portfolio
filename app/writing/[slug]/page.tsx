@@ -80,7 +80,10 @@ export default async function WritingPage({params}: WritingPageProps) {
                 <time dateTime={article.publishedAt}>
                   {formatArticleDate(article.publishedAt)}
                 </time>
-                <span>{words} words</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <WordsIcon />
+                  {words} words
+                </span>
               </div>
               <h1 className="text-heading-1 text-ink">{article.title}</h1>
             </header>
@@ -96,5 +99,18 @@ export default async function WritingPage({params}: WritingPageProps) {
         <SiteFooter />
       </AppearFade>
     </div>
+  );
+}
+
+function WordsIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path
+        d="M1.5 3h9M1.5 6h6.5M1.5 9h3.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

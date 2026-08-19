@@ -37,7 +37,7 @@ export function MusicCard() {
           </span>
         </div>
       </motion.a>
-      <div className="flex flex-col items-center gap-2 opacity-20">
+      <div className="flex flex-col items-center gap-2 opacity-40">
         <Image
           src={music.arrow}
           alt=""

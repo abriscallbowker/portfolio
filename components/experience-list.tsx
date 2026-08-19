@@ -11,7 +11,7 @@ export function ExperienceList() {
       {experience.map((item) => (
         <li
           key={item.company}
-          className="grid grid-cols-1 gap-1 md:grid-cols-[auto_1fr] md:items-start md:gap-10"
+          className="grid grid-cols-1 gap-1 md:grid-cols-[1fr_3fr] md:items-start md:gap-10"
         >
           <p className="text-overline text-subdued">{item.duration}</p>
           <div className="flex min-w-0 flex-wrap items-center gap-1">
