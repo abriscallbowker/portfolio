@@ -94,7 +94,7 @@ export function SiteFooter() {
         className="text-body-xs text-subdued"
         initial={false}
         animate={{opacity: visible ? 0.5 : 0}}
-        transition={linkTween}
+        transition={visible ? linkTween : {duration: 0.12, ease: linkTween.ease}}
       >
         {site.fullName} © {new Date().getFullYear()}
       </motion.p>
