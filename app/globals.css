@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #fafafa;
+  --inset: #f2f2f2;
+  --ink: #121212;
+  --subdued: #7e7e7e;
+  --border: rgb(23 23 23 / 0.08);
+  --link: #0099ff;
+  --button: #f8f8f8;
+  --button-hover: #f2f2f2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-inset: var(--inset);
+  --color-ink: var(--ink);
+  --color-subdued: var(--subdued);
+  --color-border: var(--border);
+  --color-link: var(--link);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-hand: var(--font-gochi);
+  --breakpoint-md: 810px;
+  --breakpoint-xl: 1200px;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-feature-settings:
+    "cv01" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv05" 1, "cv06" 1, "cv07" 1,
+    "cv09" 1, "cv10" 1, "cv11" 1, "cv12" 1, "cv13" 1, "ss01" 1, "ss03" 1, "ss07" 1;
+}
+
+.font-hand {
+  font-family: var(--font-gochi), "Gochi Hand", cursive;
+}
+
+.text-body-md {
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.text-body-sm {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.text-body-xs {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+}
+
+.text-overline {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.text-heading-1 {
+  font-size: 32px;
+  line-height: 42px;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+}
+
+.text-heading-2 {
+  font-size: 28px;
+  line-height: 1.4em;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.text-heading-3 {
+  font-size: 22px;
+  line-height: 1.4em;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+@media (min-width: 810px) {
+  .text-heading-1 {
+    font-size: 36px;
+    line-height: 48px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .text-heading-1 {
+    font-size: 40px;
+    line-height: 48px;
+  }
+}
+
+.site-column {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+.custom-cursor {
+  display: none;
+}
+
+.has-custom-cursor .custom-cursor {
+  display: block;
+}
+
+.has-custom-cursor,
+.has-custom-cursor * {
+  cursor: none !important;
+}
+
+.tab-bar,
+.home-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  color: var(--ink);
+  border: 1px solid rgb(125 125 125 / 0.12);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow:
+    0 0.3px 0.3px rgb(0 0 0 / 0.18),
+    0 1.14px 1.14px rgb(0 0 0 / 0.16),
+    0 5px 5px rgb(0 0 0 / 0.06);
+}
+
+.home-button {
+  position: fixed;
+  top: 48px;
+  left: 48px;
+  z-index: 50;
+}
+
+@media (max-width: 809px) {
+  .home-button {
+    top: 16px;
+    left: 16px;
+  }
+}
+
+.progressive-blur-wrap {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 72px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.progressive-blur-wrap--top {
+  top: 0;
+}
+
+.progressive-blur-wrap--bottom {
+  bottom: 0;
+}
+
+.progressive-blur {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.progressive-blur__inner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 810px) {
+  .progressive-blur-wrap {
+    display: block;
+  }
+}
+
+.greeting {
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.greeting__character {
+  display: inline-block;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(10px);
+  animation: greeting-reveal 400ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes greeting-reveal {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greeting__character {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    animation: none;
+  }
+}
