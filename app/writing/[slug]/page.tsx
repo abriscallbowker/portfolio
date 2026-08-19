@@ -73,7 +73,7 @@ export default async function WritingPage({params}: WritingPageProps) {
     <div className="flex min-h-full flex-col">
       <NavControl href="/" label="Home" icon="home" position="left" appearDelay={0.2} />
       <AppearFade delay={0} className="flex flex-1 flex-col">
-        <main className="flex flex-1 flex-col items-center pt-24">
+        <main className="flex flex-1 flex-col items-center pb-48 pt-24">
           <article className="site-column flex w-full flex-col gap-8 px-4">
             <header className="flex flex-col gap-8">
               <div className="flex items-center justify-between gap-3 text-overline text-subdued">

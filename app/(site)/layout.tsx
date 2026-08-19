@@ -7,7 +7,7 @@ export default function SiteLayout({children}: {children: ReactNode}) {
   return (
     <div className="flex min-h-full flex-col">
       <SiteEnter className="flex min-h-full flex-1 flex-col">
-        <main className="flex flex-1 flex-col items-center gap-6 pt-24">
+        <main className="flex flex-1 flex-col items-center gap-6 pb-48 pt-24">
           <div className="w-full">
             <ProfileIntro showTabs />
           </div>

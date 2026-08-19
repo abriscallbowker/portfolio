@@ -42,6 +42,14 @@ export const WRITING_BY_SLUG_QUERY = defineQuery(`
       _type == "image" => {
         ...,
         ${imageFields}
+      },
+      _type == "video" => {
+        ...,
+        asset->{
+          _id,
+          url,
+          mimeType
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import {defineArrayMember, defineField, defineType} from 'sanity'
-import {DocumentTextIcon} from '@sanity/icons'
+import {DocumentTextIcon, PlayIcon} from '@sanity/icons'
 
 export const writing = defineType({
   name: 'writing',
@@ -49,6 +49,20 @@ export const writing = defineType({
         defineArrayMember({
           type: 'image',
           options: {hotspot: true},
+          fields: [
+            defineField({
+              name: 'alt',
+              title: 'Alternative text',
+              type: 'string',
+            }),
+          ],
+        }),
+        defineArrayMember({
+          name: 'video',
+          title: 'Video',
+          type: 'file',
+          icon: PlayIcon,
+          options: {accept: 'video/*'},
           fields: [
             defineField({
               name: 'alt',

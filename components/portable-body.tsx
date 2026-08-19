@@ -1,4 +1,5 @@
 import {BodyLink} from "@/components/body-link";
+import {PortableVideo} from "@/components/portable-video";
 import Image from "next/image";
 import {PortableText, type PortableTextComponents} from "next-sanity";
 import {urlFor} from "@/sanity/lib/image";
@@ -12,6 +13,14 @@ type PortableImage = {
       lqip?: string;
       dimensions?: {width: number; height: number};
     };
+  };
+};
+
+type PortableVideoValue = {
+  _type: "video";
+  alt?: string;
+  asset?: {
+    url?: string;
   };
 };
 
@@ -88,6 +97,15 @@ const components: PortableTextComponents = {
             blurDataURL={value.asset.metadata?.lqip}
             sizes="(min-width: 640px) 640px, 100vw"
           />
+        </figure>
+      );
+    },
+    video: ({value}: {value: PortableVideoValue}) => {
+      if (!value?.asset?.url) return null;
+
+      return (
+        <figure className="overflow-hidden">
+          <PortableVideo src={value.asset.url} alt={value.alt} />
         </figure>
       );
     },

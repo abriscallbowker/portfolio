@@ -21,9 +21,11 @@ if (!token) {
 
 const csvPath = path.join(repoRoot, 'framer-export.csv')
 const mutateUrl = `https://${projectId}.api.sanity.io/v${apiVersion}/data/mutate/${dataset}`
-const assetUrl = `https://${projectId}.api.sanity.io/v${apiVersion}/assets/images/${dataset}`
+const imageAssetUrl = `https://${projectId}.api.sanity.io/v${apiVersion}/assets/images/${dataset}`
+const fileAssetUrl = `https://${projectId}.api.sanity.io/v${apiVersion}/assets/files/${dataset}`
 
-const imageCache = new Map()
+const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'm4v', 'ogv'])
+const assetCache = new Map()
 
 async function loadEnvFile(filePath) {
   try {
@@ -111,32 +113,59 @@ function decodeEntities(value) {
     .replaceAll('&nbsp;', ' ')
 }
 
-function filenameFromUrl(url) {
+function extensionFromUrl(url) {
   try {
     const pathname = new URL(url).pathname
-    const base = pathname.split('/').filter(Boolean).at(-1) || 'image'
-    return base.includes('.') ? base : `${base}.webp`
+    const base = pathname.split('/').filter(Boolean).at(-1) || ''
+    const ext = base.includes('.') ? base.split('.').pop().toLowerCase() : ''
+    return ext.split('?')[0]
   } catch {
-    return 'image.webp'
+    return ''
   }
 }
 
-async function uploadImage(url) {
-  const cached = imageCache.get(url)
+function isVideoUrl(url) {
+  return VIDEO_EXTENSIONS.has(extensionFromUrl(url))
+}
+
+function filenameFromUrl(url, fallback) {
+  try {
+    const pathname = new URL(url).pathname
+    const base = pathname.split('/').filter(Boolean).at(-1) || fallback
+    return base.includes('.') ? base : `${base}.${fallback.split('.').pop()}`
+  } catch {
+    return fallback
+  }
+}
+
+function attr(source, name) {
+  return source.match(new RegExp(`\\b${name}="([^"]*)"`, 'i'))?.[1]
+}
+
+function videoSrc(chunk) {
+  return attr(chunk, 'src') || chunk.match(/<source\b[^>]*\bsrc="([^"]+)"/i)?.[1]
+}
+
+async function uploadAsset(url, kind) {
+  const cached = assetCache.get(url)
   if (cached) return cached
 
-  const imageResponse = await fetch(url)
-  if (!imageResponse.ok) {
-    throw new Error(`Failed to download ${url}: ${imageResponse.status}`)
+  const mediaResponse = await fetch(url)
+  if (!mediaResponse.ok) {
+    throw new Error(`Failed to download ${url}: ${mediaResponse.status}`)
   }
 
-  const bytes = Buffer.from(await imageResponse.arrayBuffer())
-  const filename = filenameFromUrl(url)
-  const uploadResponse = await fetch(`${assetUrl}?filename=${encodeURIComponent(filename)}`, {
+  const contentType = mediaResponse.headers.get('content-type') || 'application/octet-stream'
+  const isVideo = kind === 'file' || contentType.startsWith('video/') || isVideoUrl(url)
+  const fallbackName = isVideo ? 'video.mp4' : 'image.webp'
+  const bytes = Buffer.from(await mediaResponse.arrayBuffer())
+  const filename = filenameFromUrl(url, fallbackName)
+  const endpoint = `${isVideo ? fileAssetUrl : imageAssetUrl}?filename=${encodeURIComponent(filename)}`
+  const uploadResponse = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': imageResponse.headers.get('content-type') || 'application/octet-stream',
+      'Content-Type': contentType,
     },
     body: bytes,
   })
@@ -148,7 +177,7 @@ async function uploadImage(url) {
 
   const json = await uploadResponse.json()
   const assetId = json.document._id
-  imageCache.set(url, assetId)
+  assetCache.set(url, assetId)
   return assetId
 }
 
@@ -230,27 +259,50 @@ function textBlock(style, html, listItem) {
   return block
 }
 
+function mediaBlock(src, alt, assetsByUrl) {
+  const assetId = src ? assetsByUrl.get(src) : undefined
+  if (!assetId) return null
+
+  if (isVideoUrl(src) || assetId.startsWith('file-')) {
+    return {
+      _type: 'video',
+      _key: key(),
+      alt: decodeEntities(alt || ''),
+      asset: {_type: 'reference', _ref: assetId},
+    }
+  }
+
+  return {
+    _type: 'image',
+    _key: key(),
+    alt: decodeEntities(alt || ''),
+    asset: {_type: 'reference', _ref: assetId},
+  }
+}
+
 function htmlToBlocks(html, assetsByUrl) {
   const blocks = []
   const pattern =
-    /<img\b[^>]*>|<(p|ol|ul|blockquote|h[1-6])\b[^>]*>[\s\S]*?<\/\1>/gi
+    /<video\b[^>]*>[\s\S]*?<\/video>|<video\b[^>]*\/?>|<img\b[^>]*>|<(p|ol|ul|blockquote|h[1-6])\b[^>]*>[\s\S]*?<\/\1>/gi
   const matches = html.match(pattern) || []
 
   for (const chunk of matches) {
+    const videoMatch = chunk.match(/^<video\b/i)
+    if (videoMatch) {
+      const src = videoSrc(chunk)
+      const alt = attr(chunk, 'aria-label') || attr(chunk, 'title') || attr(chunk, 'alt') || ''
+      const block = mediaBlock(src, alt, assetsByUrl)
+      if (block) blocks.push(block)
+      continue
+    }
+
     const imageMatch = chunk.match(/^<img\b([^>]*)>/i)
     if (imageMatch) {
       const attrs = imageMatch[1]
-      const src = attrs.match(/src="([^"]*)"/i)?.[1]
-      const alt = attrs.match(/alt="([^"]*)"/i)?.[1] || ''
-      const assetId = src ? assetsByUrl.get(src) : undefined
-      if (assetId) {
-        blocks.push({
-          _type: 'image',
-          _key: key(),
-          alt: decodeEntities(alt),
-          asset: {_type: 'reference', _ref: assetId},
-        })
-      }
+      const src = attr(attrs, 'src')
+      const alt = attr(attrs, 'alt') || ''
+      const block = mediaBlock(src, alt, assetsByUrl)
+      if (block) blocks.push(block)
       continue
     }
 
@@ -262,9 +314,29 @@ function htmlToBlocks(html, assetsByUrl) {
 
     const paragraph = chunk.match(/^<p\b[^>]*>([\s\S]*)<\/p>$/i)
     if (paragraph) {
-      const inner = paragraph[1].replaceAll(/<br\b[^>]*>/gi, '\n').trim()
-      if (inner.replaceAll(/<[^>]+>/g, '').trim() === '' && !/<img/i.test(inner)) continue
-      blocks.push(textBlock('normal', paragraph[1]))
+      const parts = paragraph[1].split(
+        /(<video\b[^>]*>[\s\S]*?<\/video>|<video\b[^>]*\/?>|<img\b[^>]*>)/gi,
+      )
+      for (const part of parts) {
+        if (!part) continue
+        if (/^<video\b/i.test(part)) {
+          const src = videoSrc(part)
+          const alt = attr(part, 'aria-label') || attr(part, 'title') || attr(part, 'alt') || ''
+          const block = mediaBlock(src, alt, assetsByUrl)
+          if (block) blocks.push(block)
+          continue
+        }
+        if (/^<img\b/i.test(part)) {
+          const src = attr(part, 'src')
+          const alt = attr(part, 'alt') || ''
+          const block = mediaBlock(src, alt, assetsByUrl)
+          if (block) blocks.push(block)
+          continue
+        }
+        const text = part.replaceAll(/<br\b[^>]*>/gi, '\n').trim()
+        if (text.replaceAll(/<[^>]+>/g, '').trim() === '') continue
+        blocks.push(textBlock('normal', part))
+      }
       continue
     }
 
@@ -289,13 +361,25 @@ function htmlToBlocks(html, assetsByUrl) {
   return blocks
 }
 
-function collectImageUrls(html, coverUrl) {
-  const urls = new Set()
-  if (coverUrl) urls.add(coverUrl)
-  for (const match of html.matchAll(/<img\b[^>]*src="([^"]+)"/gi)) {
-    urls.add(match[1])
+function collectMediaUrls(html, coverUrl) {
+  const images = new Set()
+  const videos = new Set()
+  if (coverUrl && isVideoUrl(coverUrl)) videos.add(coverUrl)
+  else if (coverUrl) images.add(coverUrl)
+
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const src = attr(match[0], 'src')
+    if (!src) continue
+    if (isVideoUrl(src)) videos.add(src)
+    else images.add(src)
   }
-  return [...urls]
+
+  for (const match of html.matchAll(/<video\b[^>]*>[\s\S]*?<\/video>|<video\b[^>]*\/?>/gi)) {
+    const src = videoSrc(match[0])
+    if (src) videos.add(src)
+  }
+
+  return {images: [...images], videos: [...videos]}
 }
 
 function isDraft(value) {
@@ -326,14 +410,18 @@ async function importRow(row) {
   const publishedId = `writing-${slug}`
   const documentId = draft ? `drafts.${publishedId}` : publishedId
 
-  const imageUrls = collectImageUrls(row.Content, row['Cover Image'])
+  const mediaUrls = collectMediaUrls(row.Content, row['Cover Image'])
   const assetsByUrl = new Map()
-  for (const url of imageUrls) {
-    assetsByUrl.set(url, await uploadImage(url))
+  for (const url of mediaUrls.images) {
+    assetsByUrl.set(url, await uploadAsset(url, 'image'))
+  }
+  for (const url of mediaUrls.videos) {
+    assetsByUrl.set(url, await uploadAsset(url, 'file'))
   }
 
   const coverAssetId = row['Cover Image'] ? assetsByUrl.get(row['Cover Image']) : undefined
   const body = htmlToBlocks(row.Content, assetsByUrl)
+  const videoCount = body.filter((block) => block._type === 'video').length
 
   const document = {
     _id: documentId,
@@ -353,7 +441,13 @@ async function importRow(row) {
   }
 
   await mutate([{createOrReplace: document}])
-  return {id: documentId, published: !draft, images: imageUrls.length, blocks: body.length}
+  return {
+    id: documentId,
+    published: !draft,
+    images: mediaUrls.images.length,
+    videos: videoCount,
+    blocks: body.length,
+  }
 }
 
 const csv = await readFile(csvPath, 'utf8')
@@ -368,7 +462,7 @@ for (const row of rows) {
     const result = await importRow(row)
     results.push({slug: row.Slug, ...result})
     console.log(
-      `${result.published ? 'published' : 'draft'} (${result.blocks} blocks, ${result.images} images)`,
+      `${result.published ? 'published' : 'draft'} (${result.blocks} blocks, ${result.images} images, ${result.videos} videos)`,
     )
   } catch (error) {
     console.log('failed')

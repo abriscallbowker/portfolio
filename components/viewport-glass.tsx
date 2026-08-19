@@ -63,3 +63,9 @@ export function ViewportGlass() {
     </>
   );
 }
+
+export function DisableViewportGlass() {
+  return (
+    <style>{`.progressive-blur-wrap{display:none!important}`}</style>
+  );
+}
