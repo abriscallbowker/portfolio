@@ -100,7 +100,7 @@ export function PortableBody({value}: {value: unknown}) {
   if (blocks.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-6">
       <PortableText value={blocks} components={components} />
     </div>
   );

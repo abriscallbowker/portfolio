@@ -6,13 +6,8 @@ import {useEffect} from "react";
 
 const CURSOR_SIZE = 20;
 const CLICK_SCALE = 0.8;
-
-function isFinePointer() {
-  return (
-    window.matchMedia("(hover: hover)").matches &&
-    window.matchMedia("(pointer: fine)").matches
-  );
-}
+const DESKTOP_CURSOR_QUERY =
+  "(hover: hover) and (pointer: fine) and (min-width: 1200px)";
 
 export function CustomCursor() {
   const mouseX = useMotionValue(0);
@@ -23,10 +18,9 @@ export function CustomCursor() {
   const y = useTransform(mouseY, (value) => value - CURSOR_SIZE / 2);
 
   useEffect(() => {
-    if (!isFinePointer()) return;
-
-    document.documentElement.classList.add("has-custom-cursor");
+    const media = window.matchMedia(DESKTOP_CURSOR_QUERY);
     let scaleAnimation: ReturnType<typeof animate> | undefined;
+    let enabled = false;
 
     const setScale = (value: number) => {
       scaleAnimation?.stop();
@@ -49,20 +43,42 @@ export function CustomCursor() {
       setScale(1);
     };
 
-    window.addEventListener("pointermove", onMove, {passive: true});
-    window.addEventListener("pointerdown", onDown);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointerleave", onLeave);
-    document.addEventListener("mouseleave", onLeave);
+    const enable = () => {
+      if (enabled) return;
+      enabled = true;
+      document.documentElement.classList.add("has-custom-cursor");
+      window.addEventListener("pointermove", onMove, {passive: true});
+      window.addEventListener("pointerdown", onDown);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointerleave", onLeave);
+      document.addEventListener("mouseleave", onLeave);
+    };
 
-    return () => {
+    const disable = () => {
+      if (!enabled) return;
+      enabled = false;
       scaleAnimation?.stop();
+      opacity.set(0);
+      setScale(1);
       document.documentElement.classList.remove("has-custom-cursor");
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("mouseleave", onLeave);
+    };
+
+    const sync = () => {
+      if (media.matches) enable();
+      else disable();
+    };
+
+    sync();
+    media.addEventListener("change", sync);
+
+    return () => {
+      media.removeEventListener("change", sync);
+      disable();
     };
   }, [mouseX, mouseY, opacity, scale]);
 

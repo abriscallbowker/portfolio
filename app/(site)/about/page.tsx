@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="site-column flex w-full flex-col gap-10">
-      <div className="flex flex-col gap-20">
+      <div className="flex flex-col gap-12 md:gap-20">
         <ExperienceList />
         <section className="flex flex-col gap-4 px-4">
           <PhotoCollage />

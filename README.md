@@ -1,4 +1,4 @@
-This is the open source code of my portfolio.
+This is the open-source code of my portfolio.
 
 You can view my portfolio at [alexbriscallbowker.com](https://alexbriscallbowker.com)
 

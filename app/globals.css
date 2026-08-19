@@ -33,6 +33,16 @@ body {
   color: var(--ink);
 }
 
+::selection {
+  background: #e5e5e5;
+  color: var(--ink);
+}
+
+::-moz-selection {
+  background: #e5e5e5;
+  color: var(--ink);
+}
+
 body {
   font-family: var(--font-inter), Inter, sans-serif;
   font-feature-settings:
@@ -119,13 +129,15 @@ body {
   display: none;
 }
 
-.has-custom-cursor .custom-cursor {
-  display: block;
-}
+@media (min-width: 1200px) {
+  .has-custom-cursor .custom-cursor {
+    display: block;
+  }
 
-.has-custom-cursor,
-.has-custom-cursor * {
-  cursor: none !important;
+  .has-custom-cursor,
+  .has-custom-cursor * {
+    cursor: none !important;
+  }
 }
 
 .tab-bar,
@@ -153,6 +165,9 @@ body {
   top: 48px;
   left: 48px;
   z-index: 50;
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @media (max-width: 809px) {
