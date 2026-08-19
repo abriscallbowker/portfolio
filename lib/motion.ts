@@ -23,6 +23,11 @@ export const appearPop = {
   bounce: 0.2,
 } as const;
 
+export const appearScale = {
+  duration: 0.35,
+  ease: [0.32, 0.72, 0, 1] as const,
+} as const;
+
 export const cursorScaleEase = {
   duration: 0.2,
   ease: [0.32, 0.72, 0, 1] as const,

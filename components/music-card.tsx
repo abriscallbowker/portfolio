@@ -33,7 +33,18 @@ export function MusicCard() {
           <p className="text-body-xs text-subdued">{music.date}</p>
           <span className="inline-flex items-center gap-1.5 text-body-xs text-subdued">
             Listen on SoundCloud
-            <SoundCloudIcon />
+            <span
+              className="inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] bg-[#d6d6d6] p-0.5"
+              aria-hidden
+            >
+              <img
+                src="/about/soundcloud.svg"
+                alt=""
+                width={12}
+                height={12}
+                className="size-3 object-contain brightness-0 invert"
+              />
+            </span>
           </span>
         </div>
       </motion.a>
@@ -53,10 +64,3 @@ export function MusicCard() {
   );
 }
 
-function SoundCloudIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M1.5 14.2c0 1.2.9 2.1 2 2.1h.3V12c-.1-1.6 1.1-3 2.7-3.1.4 0 .8.1 1.2.2V8.4C6.3 6.5 4.2 6 2.6 7.3 1.7 8.1 1.5 9.3 1.5 10.4v3.8Zm5.2 2.1h8.8c2.4 0 4.3-1.9 4.3-4.2 0-2.2-1.7-4-3.9-4.2-.7-2.4-2.9-4.1-5.5-4.1-1.7 0-3.2.7-4.3 1.9v10.6h.6Z" />
-    </svg>
-  );
-}

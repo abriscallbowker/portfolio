@@ -1,9 +1,12 @@
 import {WritingList} from "@/components/writing-list";
+import {preloadAboutImages} from "@/lib/preload-about-images";
 import {sanityFetch} from "@/sanity/lib/live";
 import {WRITING_LIST_QUERY} from "@/sanity/lib/queries";
 import type {WritingListItem} from "@/sanity/lib/types";
 
 export default async function Home() {
+  preloadAboutImages();
+
   const {data} = await sanityFetch({
     query: WRITING_LIST_QUERY,
     stega: false,

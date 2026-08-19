@@ -9,7 +9,6 @@ type NavControlProps = {
   label: string;
   icon: "info" | "close" | "home";
   position?: "right" | "left";
-  appearDelay?: number;
 };
 
 const shortcutForIcon = {
@@ -22,7 +21,6 @@ export function NavControl({
   href,
   label,
   icon,
-  appearDelay = 0,
 }: NavControlProps) {
   const router = useRouter();
   const shortcut = shortcutForIcon[icon];
@@ -54,7 +52,7 @@ export function NavControl({
   }, [href, router, shortcut]);
 
   return (
-    <TabBar href={href} aria-label={label} className="home-button" appearDelay={appearDelay}>
+    <TabBar href={href} aria-label={label} className="home-button">
       {icon === "info" ? <InfoIcon /> : icon === "close" ? <CloseIcon /> : <HomeIcon />}
     </TabBar>
   );

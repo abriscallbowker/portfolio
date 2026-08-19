@@ -42,7 +42,14 @@ export const metadata: Metadata = {
     url: site.url,
     siteName: site.name,
     type: "website",
-    images: [site.ogImage],
+    images: [
+      {
+        url: site.ogImage,
+        width: 2400,
+        height: 1260,
+        alt: site.name,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

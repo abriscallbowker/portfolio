@@ -50,7 +50,7 @@ export function PhotoCollage() {
             key={photo.src}
             src={photo.src}
             alt={photo.alt}
-            sizes="184px"
+            sizes="(min-width: 768px) 184px, 50vw"
             rotate={photo.rotate}
             className={`absolute h-[248px] w-[184px] ${photo.className}`}
           />
@@ -62,7 +62,7 @@ export function PhotoCollage() {
             key={`${photo.src}-mobile`}
             src={photo.src}
             alt={photo.alt}
-            sizes="50vw"
+            sizes="(min-width: 768px) 184px, 50vw"
             className="relative aspect-[3/4] w-full min-w-0"
           />
         ))}

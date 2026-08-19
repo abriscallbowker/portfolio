@@ -2,10 +2,10 @@ export const site = {
   name: "Alex BB",
   fullName: "Alex Briscall Bowker",
   description: "Writing about product design, creativity, and more.",
-  url: "https://www.alexbriscallbowker.com",
+  url: "https://alexbowker.com",
   profileImage: "/headshot.webp",
   favicon: "/favicon.png",
-  ogImage: "/cover.jpg",
+  ogImage: "https://alexbowker.com/cover.jpg",
 };
 
 export const experience = [
