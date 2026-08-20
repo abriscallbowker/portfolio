@@ -34,6 +34,8 @@ export type ScreenshotItem = {
     year?: number | null;
   } | null;
   description?: string | null;
+  linkedSlug?: string | null;
+  linkedSlugText?: string | null;
   alt?: string | null;
   image?: SanityImageValue | null;
   video?: {

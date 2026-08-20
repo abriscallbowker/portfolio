@@ -1,6 +1,6 @@
 "use client";
 
-import { appearScale, scaleOut, snappySpring } from "@/lib/motion";
+import { appearScale, hoverSpring, scaleOut, snappySpring } from "@/lib/motion";
 import {
   PHONE_ASPECT,
   SCREENSHOT_IMAGE_SIZES,
@@ -16,7 +16,9 @@ import {
   useMotionValue,
   useReducedMotion,
 } from "motion/react";
+import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import Image from "next/image";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -29,6 +31,8 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+
+const MotionLink = motion.create(Link);
 
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
@@ -821,6 +825,10 @@ function ShowcaseCaption({
 }) {
   const dateLabel = formatScreenshotDate(item.date);
   const overlay = layout === "overlay";
+  const linkedSlug = item.linkedSlug?.trim();
+  const linkedSlugText = item.linkedSlugText?.trim();
+  const writingHref =
+    linkedSlug && linkedSlugText ? `/writing/${linkedSlug}` : null;
 
   return (
     <div
@@ -848,6 +856,22 @@ function ShowcaseCaption({
         <p id={descriptionId} className="text-body-sm text-subdued">
           {item.description}
         </p>
+      ) : null}
+      {writingHref && linkedSlugText ? (
+        <MotionLink
+          href={writingHref}
+          className={
+            overlay
+              ? "inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
+              : "inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued"
+          }
+          whileHover={{ opacity: 0.6 }}
+          transition={hoverSpring}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {linkedSlugText}
+          <ChevronRightIcon className="size-3.5" aria-hidden />
+        </MotionLink>
       ) : null}
     </div>
   );

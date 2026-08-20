@@ -72,6 +72,8 @@ export const SCREENSHOTS_QUERY = defineQuery(`
     type,
     date { month, year },
     description,
+    linkedSlug,
+    linkedSlugText,
     alt,
     image { ${imageFields} },
     video {

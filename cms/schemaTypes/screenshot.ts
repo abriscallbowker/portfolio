@@ -37,6 +37,18 @@ export const screenshot = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'linkedSlug',
+      title: 'Linked slug',
+      type: 'text',
+      rows: 1,
+    }),
+    defineField({
+      name: 'linkedSlugText',
+      title: 'Linked slug text',
+      type: 'text',
+      rows: 1,
+    }),
+    defineField({
       name: 'type',
       title: 'Type',
       type: 'string',
