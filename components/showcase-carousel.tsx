@@ -251,7 +251,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   );
   const active =
     items.find((item) => item._id === activeId) ?? items[0] ?? null;
-  const dateLabel = formatScreenshotDate(active?.date);
 
   const copies = useMemo(() => {
     if (items.length === 0 || containerWidth <= 0) return 3;
@@ -493,8 +492,8 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
 
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
       if (zoomedRef.current) return;
+      event.preventDefault();
       interruptSnap();
       x.set(x.get() - wheelDelta(event));
       scheduleSnap();
@@ -695,23 +694,8 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
               transition={snappySpring}
-              className="flex flex-col gap-2 text-center"
             >
-              <div className="flex items-baseline justify-center gap-3">
-                <h2 className="text-body-md font-medium text-ink">
-                  {active.title}
-                </h2>
-                {dateLabel ? (
-                  <p className="text-body-md font-medium text-ink/30">
-                    {dateLabel}
-                  </p>
-                ) : null}
-              </div>
-              {active.description ? (
-                <p className="text-body-sm text-subdued">
-                  {active.description}
-                </p>
-              ) : null}
+              <ShowcaseCaption item={active} />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -786,19 +770,25 @@ function ShowcaseZoomOverlay({
   const zoomInTransition = reduceMotion ? { duration: 0 } : appearScale;
   const zoomOutTransition = reduceMotion ? { duration: 0 } : scaleOut;
 
+  const titleId = "showcase-zoom-title";
+  const descriptionId = item.description
+    ? "showcase-zoom-description"
+    : undefined;
+
   return (
     <div
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={`${item.title}, enlarged`}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       tabIndex={-1}
-      className="fixed inset-0 z-[80] flex cursor-zoom-out items-center justify-center overflow-hidden p-4 outline-none md:p-10"
+      className="fixed inset-0 z-[80] flex cursor-zoom-out items-center justify-center overflow-y-auto overflow-x-hidden p-4 outline-none md:p-10"
       onClick={requestClose}
     >
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl" />
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-2xl" />
       <motion.div
-        className="relative max-h-full max-w-full origin-center will-change-transform"
+        className="relative z-[1] flex max-h-full max-w-full origin-center flex-col items-center gap-6 will-change-transform md:block md:gap-0"
         initial={reduceMotion ? false : { scale: 0.9 }}
         animate={{ scale: leaving ? 0.9 : 1 }}
         transition={leaving ? zoomOutTransition : zoomInTransition}
@@ -807,7 +797,58 @@ function ShowcaseZoomOverlay({
         }}
       >
         <ShowcaseZoomMedia item={item} />
+        <ShowcaseCaption
+          item={item}
+          titleId={titleId}
+          descriptionId={descriptionId}
+          layout="overlay"
+        />
       </motion.div>
+    </div>
+  );
+}
+
+function ShowcaseCaption({
+  item,
+  titleId,
+  descriptionId,
+  layout = "carousel",
+}: {
+  item: ScreenshotItem;
+  titleId?: string;
+  descriptionId?: string;
+  layout?: "carousel" | "overlay";
+}) {
+  const dateLabel = formatScreenshotDate(item.date);
+  const overlay = layout === "overlay";
+
+  return (
+    <div
+      className={
+        overlay
+          ? "flex w-full max-w-sm flex-col gap-2 text-center md:absolute md:top-1/2 md:left-[calc(100%+1.5rem)] md:w-max md:max-w-[calc((100vw-100%)/2-1.5rem)] md:-translate-y-1/2 md:text-left"
+          : "flex flex-col gap-2 text-center"
+      }
+    >
+      <div
+        className={
+          overlay
+            ? "flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1 md:justify-start"
+            : "flex items-baseline justify-center gap-3"
+        }
+      >
+        <h2 id={titleId} className="text-body-md font-medium text-ink">
+          {item.title}
+        </h2>
+        {dateLabel ? (
+          <p className="text-body-md font-medium text-ink/30">{dateLabel}</p>
+        ) : null}
+      </div>
+      {item.description ? (
+        <p id={descriptionId} className="text-body-sm text-subdued">
+          {item.description}
+        </p>
+      ) : null}
     </div>
   );
 }
