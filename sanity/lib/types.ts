@@ -24,3 +24,23 @@ export type WritingListItem = {
 export type WritingDetail = WritingListItem & {
   body?: unknown[] | null;
 };
+
+export type ScreenshotItem = {
+  _id: string;
+  title: string;
+  type?: "mobile" | "laptop" | null;
+  date?: {
+    month?: number | null;
+    year?: number | null;
+  } | null;
+  description?: string | null;
+  alt?: string | null;
+  image?: SanityImageValue | null;
+  video?: {
+    asset?: {
+      _id?: string;
+      url?: string;
+      mimeType?: string;
+    } | null;
+  } | null;
+};

@@ -64,3 +64,22 @@ export const WRITING_MORE_QUERY = defineQuery(`
     coverImage { ${imageFields} }
   }
 `);
+
+export const SCREENSHOTS_QUERY = defineQuery(`
+  *[_type == "screenshot" && (defined(image.asset) || defined(video.asset))] | order(date.year desc, date.month desc, _createdAt desc) {
+    _id,
+    title,
+    type,
+    date { month, year },
+    description,
+    alt,
+    image { ${imageFields} },
+    video {
+      asset->{
+        _id,
+        url,
+        mimeType
+      }
+    }
+  }
+`);

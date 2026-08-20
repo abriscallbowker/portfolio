@@ -9,6 +9,7 @@ import {useCallback, useLayoutEffect, useRef, useState} from "react";
 const tabs = [
   {href: "/", label: "Archive"},
   {href: "/about", label: "About"},
+  {href: "/gallery", label: "Gallery"},
 ] as const;
 
 const HOVER_GROW = 0.28;
@@ -58,10 +59,17 @@ export function PageTabs() {
     hoverIndex >= 0 && hoverIndex !== activeIndex ? metrics[hoverIndex] : null;
 
   const growingRight = Boolean(active && hovered && hovered.left > active.left);
-  const extra = active && hovered
+  const neighborIndex =
+    activeIndex >= 0 && hovered
+      ? growingRight
+        ? activeIndex + 1
+        : activeIndex - 1
+      : -1;
+  const neighbor = neighborIndex >= 0 ? metrics[neighborIndex] : null;
+  const extra = active && neighbor
     ? (growingRight
-        ? hovered.left + hovered.width - (active.left + active.width)
-        : active.left - hovered.left) * HOVER_GROW
+        ? neighbor.left + neighbor.width - (active.left + active.width)
+        : active.left - neighbor.left) * HOVER_GROW
     : 0;
   const left = (active?.left ?? 0) - (growingRight ? 0 : extra);
   const width = (active?.width ?? 0) + extra;

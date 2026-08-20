@@ -17,27 +17,23 @@ export function ExperienceList() {
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             <span className="text-body-md text-ink">{item.role}</span>
             <span className="text-body-md text-ink">at</span>
-            <a
+            <motion.a
               href={item.href}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-md px-[5px]"
+              whileHover={{opacity: 0.6}}
+              transition={hoverSpring}
             >
-              <motion.span
-                className="inline-flex"
-                whileHover={{scale: 1.02}}
-                transition={hoverSpring}
-              >
-                <Image
-                  src={item.logo}
-                  alt=""
-                  width={20}
-                  height={20}
-                  className="size-5 rounded-[4px] object-cover"
-                />
-              </motion.span>
+              <Image
+                src={item.logo}
+                alt=""
+                width={20}
+                height={20}
+                className="size-5 rounded-[4px] object-cover"
+              />
               <span className="text-body-md text-ink">{item.company}</span>
-            </a>
+            </motion.a>
           </div>
         </li>
       ))}

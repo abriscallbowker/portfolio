@@ -19,7 +19,9 @@ const tabSlideVariants = {
 };
 
 function tabIndex(segment: string | null) {
-  return segment === "about" ? 1 : 0;
+  if (segment === "about") return 1;
+  if (segment === "gallery") return 2;
+  return 0;
 }
 
 function FrozenRouter({children}: {children: ReactNode}) {

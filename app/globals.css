@@ -46,8 +46,21 @@ body {
 body {
   font-family: var(--font-inter), Inter, sans-serif;
   font-feature-settings:
-    "cv01" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv05" 1, "cv06" 1, "cv07" 1,
-    "cv09" 1, "cv10" 1, "cv11" 1, "cv12" 1, "cv13" 1, "ss01" 1, "ss03" 1, "ss07" 1;
+    "cv01" 1,
+    "cv02" 1,
+    "cv03" 1,
+    "cv04" 1,
+    "cv05" 1,
+    "cv06" 1,
+    "cv07" 1,
+    "cv09" 1,
+    "cv10" 1,
+    "cv11" 1,
+    "cv12" 1,
+    "cv13" 1,
+    "ss01" 1,
+    "ss03" 1,
+    "ss07" 1;
 }
 
 .font-hand {
@@ -247,4 +260,50 @@ body {
     transform: none;
     animation: none;
   }
+}
+
+.showcase-carousel {
+  overflow-x: clip;
+}
+
+.showcase-card {
+  position: relative;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+}
+
+.showcase-card-front {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transform: translateZ(1px);
+}
+
+.showcase-card-depth {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.showcase-card-depth img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  filter: brightness(0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-card-depth {
+    display: none;
+  }
+}
+
+.showcase-card video::-webkit-media-controls {
+  display: none !important;
 }
