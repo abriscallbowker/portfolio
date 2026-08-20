@@ -119,4 +119,14 @@ export const screenshot = defineType({
       }
     },
   },
+  orderings: [
+    {
+      title: 'Date, newest',
+      name: 'dateDesc',
+      by: [
+        {field: 'date.year', direction: 'desc'},
+        {field: 'date.month', direction: 'desc'},
+      ],
+    },
+  ],
 })

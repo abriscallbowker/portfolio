@@ -1,7 +1,12 @@
 "use client";
 
 import { snappySpring } from "@/lib/motion";
-import { urlFor } from "@/sanity/lib/image";
+import {
+  PHONE_ASPECT,
+  SCREENSHOT_IMAGE_SIZES,
+  screenshotImageSize,
+  screenshotMediaUrl,
+} from "@/lib/screenshot-media";
 import type { SanityImageValue, ScreenshotItem } from "@/sanity/lib/types";
 import {
   animate,
@@ -26,7 +31,6 @@ import {
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
-const PHONE_ASPECT = 9 / 19.5;
 const LAPTOP_ASPECT = 16 / 10;
 const SLOT_ANGLE = (42 * Math.PI) / 180;
 const MAX_THETA = (70 * Math.PI) / 180;
@@ -151,7 +155,6 @@ function useCarouselBudget(
   md: boolean,
   enabled: boolean,
   sectionRef: RefObject<HTMLElement | null>,
-  captionRef: RefObject<HTMLElement | null>,
 ) {
   const [maxCardHeight, setMaxCardHeight] = useState(() => idealHeight(md));
 
@@ -164,11 +167,8 @@ function useCarouselBudget(
       const viewportBottom =
         (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight);
       const top = section.getBoundingClientRect().top;
-      const captionH = Math.max(
-        captionRef.current?.offsetHeight ?? 0,
-        CAPTION_RESERVE,
-      );
-      const available = viewportBottom - top - captionH - bottomClearance(md);
+      const available =
+        viewportBottom - top - CAPTION_RESERVE - bottomClearance(md);
       const next = Math.max(
         MIN_CARD_HEIGHT,
         Math.min(idealHeight(md), available - DEPTH_PAD),
@@ -177,18 +177,14 @@ function useCarouselBudget(
     };
 
     update();
-    const observer = new ResizeObserver(update);
-    const caption = captionRef.current;
-    if (caption) observer.observe(caption);
     const viewport = window.visualViewport;
     window.addEventListener("resize", update);
     viewport?.addEventListener("resize", update);
     return () => {
-      observer.disconnect();
       window.removeEventListener("resize", update);
       viewport?.removeEventListener("resize", update);
     };
-  }, [captionRef, enabled, md, sectionRef]);
+  }, [enabled, md, sectionRef]);
 
   return maxCardHeight;
 }
@@ -206,7 +202,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const [containerWidth, setContainerWidth] = useState(0);
 
   const sectionRef = useRef<HTMLElement>(null);
-  const captionRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIdRef = useRef(activeId);
@@ -226,12 +221,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     containerWidth: 0,
   });
 
-  const maxCardHeight = useCarouselBudget(
-    md,
-    items.length > 0,
-    sectionRef,
-    captionRef,
-  );
+  const maxCardHeight = useCarouselBudget(md, items.length > 0, sectionRef);
   const x = useMotionValue(0);
   const gap = cardGap(md);
   const layoutOpts = useMemo<LayoutOpts>(
@@ -359,11 +349,13 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const translateX = flatten
         ? 0
         : (rotRadius * Math.sin(theta) - dx) * 0.85;
-      const slot = avgStride > 0 ? Math.abs(dx) / avgStride : 0;
+      const edgeDistance = Math.abs(dx) - width / 2;
+      const slot = avgStride > 0 ? Math.max(0, edgeDistance) / avgStride : 0;
       const fadeT = Math.max(0, Math.min(1, (slot - fullSlots) / fadeSlots));
       const opacity =
         fadeT <= 0 ? 1 : fadeT >= 1 ? 0 : 1 - fadeT * fadeT * (3 - 2 * fadeT);
       const interactive = opacity > 0.2;
+      const offscreen = edgeDistance > viewWidth;
 
       el.style.transform = flatten
         ? "none"
@@ -372,15 +364,10 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const stack = String(Math.round(1000 + translateZ));
       el.style.zIndex = stack;
       if (el.parentElement) {
-        const shadowX = flatten ? 0 : Math.round(Math.sin(theta) * 10);
         el.parentElement.style.opacity = String(opacity);
-        el.parentElement.style.visibility =
-          opacity > 0.01 ? "visible" : "hidden";
+        el.parentElement.style.visibility = offscreen ? "hidden" : "visible";
         el.parentElement.style.zIndex = stack;
         el.parentElement.style.pointerEvents = interactive ? "auto" : "none";
-        el.parentElement.style.filter = flatten
-          ? "none"
-          : `drop-shadow(${shadowX}px 8px 12px rgba(0,0,0,0.12))`;
       }
 
       const dist = Math.abs(dx);
@@ -656,11 +643,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         </div>
       </div>
 
-      <div
-        ref={captionRef}
-        className="site-column w-full px-4 pt-6"
-        aria-live="polite"
-      >
+      <div className="site-column w-full px-4 pt-6" aria-live="polite">
         <AnimatePresence mode="wait">
           {active ? (
             <motion.div
@@ -694,10 +677,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   );
 }
 
-function mediaUrl(image: SanityImageValue | null | undefined) {
-  if (!image?.asset) return null;
-  return urlFor(image).width(1200).url();
-}
 
 function ShowcaseDevice({
   item,
@@ -706,7 +685,7 @@ function ShowcaseDevice({
   item: ScreenshotItem;
   reduceMotion: boolean;
 }) {
-  const depthSrc = mediaUrl(item.image);
+  const depthSrc = screenshotMediaUrl(item.image);
 
   return (
     <>
@@ -721,7 +700,8 @@ function ShowcaseDevice({
               src={depthSrc}
               alt=""
               draggable={false}
-              style={{ transform: `translateZ(${-index - 1}px)` }}
+              decoding="async"
+              style={{ transform: `translateZ(${(-index - 1) * 2}px)` }}
             />
           ))}
         </div>
@@ -741,12 +721,10 @@ function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
 
   if (!image?.asset) return null;
 
-  const src = mediaUrl(image);
+  const src = screenshotMediaUrl(image);
   if (!src) return null;
 
-  const dimensions = image.asset.metadata?.dimensions;
-  const width = dimensions?.width ?? 800;
-  const height = dimensions?.height ?? Math.round(800 / PHONE_ASPECT);
+  const { width, height } = screenshotImageSize(image);
 
   return (
     <Image
@@ -757,7 +735,7 @@ function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
       draggable={false}
       placeholder={image.asset.metadata?.lqip ? "blur" : "empty"}
       blurDataURL={image.asset.metadata?.lqip}
-      sizes="(min-width: 810px) 40vw, 92vw"
+      sizes={SCREENSHOT_IMAGE_SIZES}
       className="pointer-events-none size-full object-cover"
     />
   );
@@ -773,7 +751,7 @@ function CarouselVideo({
   poster: SanityImageValue | null;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
-  const posterUrl = mediaUrl(poster) ?? undefined;
+  const posterUrl = screenshotMediaUrl(poster) ?? undefined;
 
   useEffect(() => {
     const el = ref.current;

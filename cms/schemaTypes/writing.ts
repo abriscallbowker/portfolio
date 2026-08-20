@@ -23,7 +23,7 @@ export const writing = defineType({
     defineField({
       name: 'publishedAt',
       title: 'Date',
-      type: 'datetime',
+      type: 'date',
       validation: (rule) => rule.required(),
     }),
     defineField({
