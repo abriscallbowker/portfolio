@@ -310,3 +310,21 @@ body {
 .showcase-card video::-webkit-media-controls {
   display: none !important;
 }
+
+.showcase-zoom-media {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(1200px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.16));
+}
+
+@media (min-width: 810px) {
+  .showcase-zoom-media {
+    max-width: min(1200px, calc(100vw - 5rem));
+    max-height: calc(100dvh - 5rem);
+  }
+}

@@ -24,9 +24,11 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type PointerEvent,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
@@ -127,6 +129,8 @@ function wrapX(value: number, setWidth: number) {
   return wrapped > 0 ? wrapped - setWidth : wrapped;
 }
 
+const emptySubscribe = () => () => {};
+
 function layoutSet(items: ScreenshotItem[], gap: number, opts: LayoutOpts) {
   const sizes = items.map((item) => itemSize(item, opts));
   const widths = sizes.map((size) => size.width);
@@ -202,6 +206,12 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const md = useIsMd();
   const [activeId, setActiveId] = useState(items[0]?._id ?? null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [zoomedItem, setZoomedItem] = useState<ScreenshotItem | null>(null);
+  const canPortal = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   const sectionRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -217,6 +227,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const copiesRef = useRef(3);
   const itemsRef = useRef(items);
   const initializedRef = useRef(false);
+  const zoomedRef = useRef(false);
   const layoutOptsRef = useRef<LayoutOpts>({
     md,
     maxHeight: idealHeight(md),
@@ -254,7 +265,8 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     reduceMotionRef.current = Boolean(reduceMotion);
     copiesRef.current = copies;
     layoutOptsRef.current = layoutOpts;
-  }, [activeId, copies, items, layoutOpts, reduceMotion]);
+    zoomedRef.current = zoomedItem !== null;
+  }, [activeId, copies, items, layoutOpts, reduceMotion, zoomedItem]);
 
   const loopItems = useMemo(
     () =>
@@ -482,6 +494,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      if (zoomedRef.current) return;
       interruptSnap();
       x.set(x.get() - wheelDelta(event));
       scheduleSnap();
@@ -529,14 +542,27 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
 
   const onSelect = useCallback(
     (id: string) => {
+      if (id === activeIdRef.current) {
+        const item =
+          itemsRef.current.find((entry) => entry._id === id) ?? null;
+        if (item?.image?.asset || item?.video?.asset?.url) {
+          setZoomedItem(item);
+        }
+        return;
+      }
+
       const index = itemsRef.current.findIndex((item) => item._id === id);
       if (index >= 0) snapTo(index);
     },
     [snapTo],
   );
 
+  const closeZoom = useCallback(() => {
+    setZoomedItem(null);
+  }, []);
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
+    if (zoomedRef.current || event.button !== 0) return;
     interruptSnap();
     draggingRef.current = false;
     dragMovedRef.current = 0;
@@ -590,11 +616,13 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   }
 
   return (
-    <section
-      ref={sectionRef}
-      className="flex w-full flex-col items-center"
-      aria-label="Gallery"
-    >
+    <>
+      <section
+        ref={sectionRef}
+        className="flex w-full flex-col items-center"
+        aria-label="Gallery"
+        inert={zoomedItem ? true : undefined}
+      >
       <div
         className="showcase-carousel relative mx-auto w-full cursor-grab select-none active:cursor-grabbing"
         style={{
@@ -623,8 +651,14 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
                   type="button"
                   data-id={item._id}
                   aria-current={activeId === item._id ? "true" : undefined}
-                  aria-label={item.title}
-                  className="relative shrink-0 bg-transparent p-0"
+                  aria-label={
+                    activeId === item._id
+                      ? `${item.title}, view larger`
+                      : item.title
+                  }
+                  className={`relative shrink-0 bg-transparent p-0 ${
+                    activeId === item._id ? "cursor-zoom-in" : ""
+                  }`}
                   style={{ height: size.height, width: size.width }}
                   onClick={(event) => {
                     if (event.detail !== 0) return;
@@ -682,7 +716,132 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
           ) : null}
         </AnimatePresence>
       </div>
-    </section>
+      </section>
+      {canPortal
+        ? createPortal(
+            <AnimatePresence>
+              {zoomedItem ? (
+                <ShowcaseZoomOverlay
+                  key={zoomedItem._id}
+                  item={zoomedItem}
+                  onClose={closeZoom}
+                  reduceMotion={Boolean(reduceMotion)}
+                />
+              ) : null}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function ShowcaseZoomOverlay({
+  item,
+  onClose,
+  reduceMotion,
+}: {
+  item: ScreenshotItem;
+  onClose: () => void;
+  reduceMotion: boolean;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+
+    const html = document.documentElement;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [onClose]);
+
+  const zoomTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.08, ease: [0.32, 0.72, 0, 1] as const };
+
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${item.title}, enlarged`}
+      tabIndex={-1}
+      className="fixed inset-0 z-[80] flex cursor-zoom-out items-center justify-center overflow-hidden p-4 outline-none md:p-10"
+      onClick={onClose}
+    >
+      <motion.div
+        className="absolute inset-0 bg-background/80 backdrop-blur-2xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={zoomTransition}
+      />
+      <motion.div
+        className="relative max-h-full max-w-full"
+        initial={reduceMotion ? false : { scale: 0.96 }}
+        animate={{ scale: 1 }}
+        exit={reduceMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0 }}
+        transition={zoomTransition}
+      >
+        <ShowcaseZoomMedia item={item} />
+      </motion.div>
+    </div>
+  );
+}
+
+function ShowcaseZoomMedia({ item }: { item: ScreenshotItem }) {
+  const videoUrl = item.video?.asset?.url ?? null;
+  const image = item.image?.asset ? item.image : null;
+  const alt = item.alt || item.title;
+
+  if (videoUrl) {
+    return (
+      <video
+        src={videoUrl}
+        poster={screenshotMediaUrl(image) ?? undefined}
+        autoPlay
+        muted
+        loop
+        playsInline
+        controls={false}
+        aria-label={alt}
+        className="showcase-zoom-media"
+      />
+    );
+  }
+
+  if (!image?.asset) return null;
+
+  const src = screenshotMediaUrl(image);
+  if (!src) return null;
+
+  const { width, height } = screenshotImageSize(image);
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      draggable={false}
+      className="showcase-zoom-media"
+    />
   );
 }
 
