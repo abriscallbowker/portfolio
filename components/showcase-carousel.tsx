@@ -37,6 +37,8 @@ const MotionLink = motion.create(Link);
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
+const ZOOM_NAV_THRESHOLD = 64;
+const ZOOM_COPIES = 3;
 const LAPTOP_ASPECT = 16 / 10;
 const SLOT_ANGLE = (42 * Math.PI) / 180;
 const MAX_THETA = (70 * Math.PI) / 180;
@@ -145,6 +147,84 @@ function layoutSet(items: ScreenshotItem[], gap: number, opts: LayoutOpts) {
     cursor += width + gap;
   }
   return { widths, starts, setWidth: cursor, sizes };
+}
+
+function zoomGap(md: boolean) {
+  return md ? 320 : 48;
+}
+
+function zoomMediaBounds(
+  md: boolean,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  return {
+    maxWidth: Math.min(1200, Math.max(1, viewportWidth - (md ? 80 : 32))),
+    maxHeight: Math.max(1, viewportHeight - (md ? 80 : 192)),
+  };
+}
+
+function zoomItemSize(
+  item: ScreenshotItem,
+  maxWidth: number,
+  maxHeight: number,
+): CardSize {
+  const aspect = mediaAspect(item);
+  let width = maxWidth;
+  let height = aspect > 0 ? width / aspect : maxHeight;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * aspect;
+  }
+  return { width, height, aspect };
+}
+
+function zoomLayoutSet(
+  items: ScreenshotItem[],
+  gap: number,
+  maxWidth: number,
+  maxHeight: number,
+) {
+  const sizes = items.map((item) => zoomItemSize(item, maxWidth, maxHeight));
+  const widths = sizes.map((size) => size.width);
+  const starts: number[] = [];
+  let cursor = 0;
+  for (const width of widths) {
+    starts.push(cursor);
+    cursor += width + gap;
+  }
+  return { widths, starts, setWidth: cursor, sizes };
+}
+
+function nearestZoomTarget(
+  indexInSet: number,
+  currentX: number,
+  layout: { starts: number[]; widths: number[]; setWidth: number },
+  viewCenter: number,
+  copyCount: number,
+) {
+  const { starts, widths, setWidth } = layout;
+  let best = currentX;
+  let bestDist = Infinity;
+  for (let copy = 0; copy < copyCount; copy += 1) {
+    const target =
+      viewCenter - (copy * setWidth + starts[indexInSet] + widths[indexInSet] / 2);
+    const dist = Math.abs(target - currentX);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = target;
+    }
+  }
+  return best;
+}
+
+function zoomStepStride(
+  fromIndex: number,
+  toIndex: number,
+  widths: number[],
+  gap: number,
+) {
+  return widths[fromIndex] / 2 + gap + widths[toIndex] / 2;
 }
 
 function useIsMd() {
@@ -564,6 +644,15 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     setZoomedItem(null);
   }, []);
 
+  const onZoomActiveChange = useCallback(
+    (item: ScreenshotItem) => {
+      setZoomedItem((current) => (current?._id === item._id ? current : item));
+      const index = itemsRef.current.findIndex((entry) => entry._id === item._id);
+      if (index >= 0 && item._id !== activeIdRef.current) snapTo(index);
+    },
+    [snapTo],
+  );
+
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (zoomedRef.current || event.button !== 0) return;
     interruptSnap();
@@ -710,8 +799,9 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
             <AnimatePresence>
               {zoomedItem ? (
                 <ShowcaseZoomOverlay
-                  key={zoomedItem._id}
-                  item={zoomedItem}
+                  items={items}
+                  startId={zoomedItem._id}
+                  onActiveChange={onZoomActiveChange}
                   onClose={closeZoom}
                   reduceMotion={Boolean(reduceMotion)}
                 />
@@ -725,17 +815,93 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
 }
 
 function ShowcaseZoomOverlay({
-  item,
+  items,
+  startId,
+  onActiveChange,
   onClose,
   reduceMotion,
 }: {
-  item: ScreenshotItem;
+  items: ScreenshotItem[];
+  startId: string;
+  onActiveChange: (item: ScreenshotItem) => void;
   onClose: () => void;
   reduceMotion: boolean;
 }) {
+  const md = useIsMd();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const leavingRef = useRef(false);
+  const draggingRef = useRef(false);
+  const snappingRef = useRef(false);
+  const initializedRef = useRef(false);
+  const gestureActiveRef = useRef(false);
+  const gestureIndexRef = useRef(0);
+  const gestureFromLoopRef = useRef(0);
+  const gestureRestXRef = useRef(0);
+  const gestureMinXRef = useRef(0);
+  const gestureMaxXRef = useRef(0);
+  const dragMovedRef = useRef(0);
+  const pointerRef = useRef<{ id: number; lastX: number; lastY: number } | null>(
+    null,
+  );
+  const snapTimerRef = useRef<number | null>(null);
+  const snapAnimationRef = useRef<ReturnType<typeof animate> | null>(null);
+  const itemsRef = useRef(items);
+  const mdRef = useRef(md);
+  const viewRef = useRef({ width: 0, height: 0 });
+  const onActiveChangeRef = useRef(onActiveChange);
+  const reduceMotionRef = useRef(reduceMotion);
+  const activeIdRef = useRef(startId);
+  const centeredLoopIndexRef = useRef(0);
+  const wheelBurstRef = useRef(false);
+  const wheelIdleTimerRef = useRef<number | null>(null);
+
   const [leaving, setLeaving] = useState(false);
+  const [activeId, setActiveId] = useState(startId);
+  const [view, setView] = useState({ width: 0, height: 0 });
+  const [centeredLoopIndex, setCenteredLoopIndex] = useState(() => {
+    const index = Math.max(
+      0,
+      items.findIndex((item) => item._id === startId),
+    );
+    return items.length > 1 ? items.length + index : index;
+  });
+
+  const x = useMotionValue(0);
+  const gap = zoomGap(md);
+  const bounds = zoomMediaBounds(md, view.width, view.height);
+  const layout = useMemo(
+    () => zoomLayoutSet(items, gap, bounds.maxWidth, bounds.maxHeight),
+    [bounds.maxHeight, bounds.maxWidth, gap, items],
+  );
+  const copies = items.length > 1 ? ZOOM_COPIES : 1;
+  const loopItems = useMemo(
+    () =>
+      Array.from({ length: copies }, (_, copy) =>
+        items.map((item) => ({ item, copy })),
+      ).flat(),
+    [copies, items],
+  );
+  const active = items.find((item) => item._id === activeId) ?? items[0] ?? null;
+
+  useLayoutEffect(() => {
+    itemsRef.current = items;
+    mdRef.current = md;
+    viewRef.current = view;
+    onActiveChangeRef.current = onActiveChange;
+    reduceMotionRef.current = reduceMotion;
+    activeIdRef.current = activeId;
+    centeredLoopIndexRef.current = centeredLoopIndex;
+  }, [
+    activeId,
+    centeredLoopIndex,
+    items,
+    md,
+    onActiveChange,
+    reduceMotion,
+    view,
+  ]);
 
   const requestClose = useCallback(() => {
     if (leavingRef.current) return;
@@ -747,6 +913,384 @@ function ShowcaseZoomOverlay({
     setLeaving(true);
   }, [onClose, reduceMotion]);
 
+  const applyTransforms = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || itemsRef.current.length === 0) return;
+
+    const viewWidth = container.clientWidth;
+    const viewCenter = viewWidth / 2;
+    const currentGap = zoomGap(mdRef.current);
+    const { maxWidth, maxHeight } = zoomMediaBounds(
+      mdRef.current,
+      viewWidth,
+      viewRef.current.height,
+    );
+    const { setWidth } = zoomLayoutSet(
+      itemsRef.current,
+      currentGap,
+      maxWidth,
+      maxHeight,
+    );
+    const live =
+      draggingRef.current || snappingRef.current || gestureActiveRef.current;
+
+    if (setWidth > 0 && itemsRef.current.length > 1 && !live) {
+      x.set(wrapX(x.get(), setWidth));
+    }
+
+    let cursor = x.get();
+    let closestId: string | null = itemsRef.current[0]?._id ?? null;
+    let closestLoop = 0;
+    let closestDist = Infinity;
+    const total = cardRefs.current.length;
+    const fromLoop = gestureFromLoopRef.current;
+    const shift = x.get() - gestureRestXRef.current;
+    const nextLoop = total > 0 ? (fromLoop + 1) % total : 0;
+    const prevLoop = total > 0 ? (fromLoop - 1 + total) % total : 0;
+
+    cardRefs.current.forEach((el, loopIndex) => {
+      if (!el) return;
+      const width = el.offsetWidth;
+      const dx = cursor + width / 2 - viewCenter;
+      const dist = Math.abs(dx);
+      el.style.zIndex = String(Math.round(1000 - dist));
+
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestId = el.dataset.id ?? null;
+        closestLoop = loopIndex;
+      }
+
+      cursor += width + currentGap;
+    });
+
+    cursor = x.get();
+    cardRefs.current.forEach((el, loopIndex) => {
+      if (!el) return;
+      const width = el.offsetWidth || 1;
+      const dx = cursor + width / 2 - viewCenter;
+      const incoming =
+        (shift < -1 && loopIndex === nextLoop) ||
+        (shift > 1 && loopIndex === prevLoop);
+      const show =
+        loopIndex === closestLoop ||
+        (live && (loopIndex === fromLoop || incoming));
+      const fadeRange = Math.max(width * 0.45, 64);
+      const opacity = show
+        ? Math.max(0, 1 - Math.abs(dx) / fadeRange)
+        : 0;
+      el.style.opacity = String(opacity);
+      el.style.visibility = opacity > 0.02 ? "visible" : "hidden";
+      el.style.pointerEvents =
+        loopIndex === closestLoop && opacity > 0.2 ? "auto" : "none";
+      cursor += width + currentGap;
+    });
+
+    if (closestLoop !== centeredLoopIndexRef.current) {
+      centeredLoopIndexRef.current = closestLoop;
+      setCenteredLoopIndex(closestLoop);
+    }
+
+    if (!snappingRef.current && closestId && closestId !== activeIdRef.current) {
+      activeIdRef.current = closestId;
+      setActiveId(closestId);
+      const item = itemsRef.current.find((entry) => entry._id === closestId);
+      if (item) onActiveChangeRef.current(item);
+    }
+  }, [x]);
+
+  useAnimationFrame(() => {
+    if (itemsRef.current.length === 0 || leavingRef.current) return;
+    applyTransforms();
+  });
+
+  const animateSnap = useCallback(
+    (target: number) => {
+      const from = x.get();
+      if (!Number.isFinite(target) || Math.abs(target - from) < 1) {
+        snappingRef.current = false;
+        return;
+      }
+
+      snapAnimationRef.current?.stop();
+      snappingRef.current = true;
+
+      if (reduceMotionRef.current) {
+        const { maxWidth, maxHeight } = zoomMediaBounds(
+          mdRef.current,
+          containerRef.current?.clientWidth ?? viewRef.current.width,
+          viewRef.current.height,
+        );
+        const { setWidth } = zoomLayoutSet(
+          itemsRef.current,
+          zoomGap(mdRef.current),
+          maxWidth,
+          maxHeight,
+        );
+        x.set(itemsRef.current.length > 1 ? wrapX(target, setWidth) : target);
+        snappingRef.current = false;
+        applyTransforms();
+        return;
+      }
+
+      const animation = animate(from, target, {
+        ...snappySpring,
+        onUpdate: (latest) => {
+          x.set(latest);
+        },
+      });
+      snapAnimationRef.current = animation;
+      void animation.then(() => {
+        if (snapAnimationRef.current !== animation) return;
+        const { maxWidth, maxHeight } = zoomMediaBounds(
+          mdRef.current,
+          containerRef.current?.clientWidth ?? viewRef.current.width,
+          viewRef.current.height,
+        );
+        const latest = zoomLayoutSet(
+          itemsRef.current,
+          zoomGap(mdRef.current),
+          maxWidth,
+          maxHeight,
+        );
+        if (itemsRef.current.length > 1) {
+          x.set(wrapX(x.get(), latest.setWidth));
+        }
+        snappingRef.current = false;
+        snapAnimationRef.current = null;
+        applyTransforms();
+      });
+    },
+    [applyTransforms, x],
+  );
+
+  const snapToIndex = useCallback(
+    (indexInSet: number) => {
+      const container = containerRef.current;
+      const n = itemsRef.current.length;
+      if (!container || n === 0) return;
+
+      const wrappedIndex = ((indexInSet % n) + n) % n;
+      const { maxWidth, maxHeight } = zoomMediaBounds(
+        mdRef.current,
+        container.clientWidth,
+        viewRef.current.height,
+      );
+      const layout = zoomLayoutSet(
+        itemsRef.current,
+        zoomGap(mdRef.current),
+        maxWidth,
+        maxHeight,
+      );
+      const current = x.get();
+      const viewCenter = container.clientWidth / 2;
+      const copyCount = n > 1 ? ZOOM_COPIES : 1;
+      const target = nearestZoomTarget(
+        wrappedIndex,
+        current,
+        layout,
+        viewCenter,
+        copyCount,
+      );
+
+      const item = itemsRef.current[wrappedIndex];
+      if (item && item._id !== activeIdRef.current) {
+        activeIdRef.current = item._id;
+        setActiveId(item._id);
+        onActiveChangeRef.current(item);
+      }
+
+      if (!gestureActiveRef.current) {
+        gestureFromLoopRef.current = centeredLoopIndexRef.current;
+        gestureRestXRef.current = current;
+      }
+
+      animateSnap(target);
+    },
+    [animateSnap, x],
+  );
+
+  const snapToClosest = useCallback(() => {
+    const n = itemsRef.current.length;
+    if (n === 0) return;
+    if (n === 1) {
+      snapToIndex(0);
+      return;
+    }
+
+    const fromIndex = gestureActiveRef.current
+      ? gestureIndexRef.current
+      : Math.max(
+          0,
+          itemsRef.current.findIndex(
+            (item) => item._id === activeIdRef.current,
+          ),
+        );
+    const restX = gestureActiveRef.current
+      ? gestureRestXRef.current
+      : x.get();
+    const delta = restX - x.get();
+    const destIndex =
+      Math.abs(delta) >= ZOOM_NAV_THRESHOLD
+        ? fromIndex + (delta > 0 ? 1 : -1)
+        : fromIndex;
+
+    gestureActiveRef.current = false;
+    snapToIndex(destIndex);
+  }, [snapToIndex, x]);
+
+  const scheduleSnap = useCallback(() => {
+    if (snapTimerRef.current !== null)
+      window.clearTimeout(snapTimerRef.current);
+    snapTimerRef.current = window.setTimeout(() => {
+      snapTimerRef.current = null;
+      snapToClosest();
+    }, SNAP_IDLE_MS);
+  }, [snapToClosest]);
+
+  const interruptSnap = useCallback(() => {
+    if (snapTimerRef.current !== null) {
+      window.clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = null;
+    }
+    snapAnimationRef.current?.stop();
+    snapAnimationRef.current = null;
+    snappingRef.current = false;
+  }, []);
+
+  const releaseWheelBurst = useCallback(() => {
+    if (wheelIdleTimerRef.current !== null)
+      window.clearTimeout(wheelIdleTimerRef.current);
+    wheelIdleTimerRef.current = window.setTimeout(function tick() {
+      wheelIdleTimerRef.current = null;
+      if (snappingRef.current) {
+        wheelIdleTimerRef.current = window.setTimeout(tick, SNAP_IDLE_MS);
+        return;
+      }
+      wheelBurstRef.current = false;
+    }, SNAP_IDLE_MS);
+  }, []);
+
+  const beginGesture = useCallback(() => {
+    if (gestureActiveRef.current) return;
+    const n = itemsRef.current.length;
+    const container = containerRef.current;
+    if (!container || n === 0) return;
+
+    const index = Math.max(
+      0,
+      itemsRef.current.findIndex((item) => item._id === activeIdRef.current),
+    );
+    gestureActiveRef.current = true;
+    gestureIndexRef.current = index;
+    gestureFromLoopRef.current = centeredLoopIndexRef.current;
+
+    const restX = x.get();
+    gestureRestXRef.current = restX;
+    if (n < 2) {
+      gestureMinXRef.current = restX;
+      gestureMaxXRef.current = restX;
+      return;
+    }
+
+    const currentGap = zoomGap(mdRef.current);
+    const { maxWidth, maxHeight } = zoomMediaBounds(
+      mdRef.current,
+      container.clientWidth,
+      viewRef.current.height,
+    );
+    const { widths } = zoomLayoutSet(
+      itemsRef.current,
+      currentGap,
+      maxWidth,
+      maxHeight,
+    );
+    const prevIndex = (index - 1 + n) % n;
+    const nextIndex = (index + 1) % n;
+    gestureMinXRef.current =
+      restX - zoomStepStride(index, nextIndex, widths, currentGap);
+    gestureMaxXRef.current =
+      restX + zoomStepStride(index, prevIndex, widths, currentGap);
+  }, [x]);
+
+  const clampLiveX = useCallback((next: number) => {
+    const min = gestureMinXRef.current;
+    const max = gestureMaxXRef.current;
+    return max >= min ? Math.max(min, Math.min(max, next)) : next;
+  }, []);
+
+  useLayoutEffect(() => {
+    const update = () => {
+      const vv = window.visualViewport;
+      const width = containerRef.current?.clientWidth ?? window.innerWidth;
+      const height = vv?.height ?? window.innerHeight;
+      setView((prev) =>
+        Math.abs(prev.width - width) < 0.5 &&
+        Math.abs(prev.height - height) < 0.5
+          ? prev
+          : { width, height },
+      );
+    };
+
+    update();
+    const node = containerRef.current;
+    const observer = node ? new ResizeObserver(update) : null;
+    if (node) observer?.observe(node);
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || view.width <= 0 || items.length === 0) return;
+
+    const { starts, widths, setWidth } = layout;
+    if (setWidth <= 0 || widths.length === 0) return;
+
+    const viewCenter = view.width / 2;
+    const id = initializedRef.current ? activeIdRef.current : startId;
+    const index = Math.max(
+      0,
+      items.findIndex((item) => item._id === id),
+    );
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      const copy = items.length > 1 ? 1 : 0;
+      x.set(viewCenter - (copy * setWidth + starts[index] + widths[index] / 2));
+      applyTransforms();
+      return;
+    }
+
+    if (
+      draggingRef.current ||
+      snappingRef.current ||
+      gestureActiveRef.current
+    ) {
+      return;
+    }
+
+    const current = x.get();
+    let best = current;
+    let bestDist = Infinity;
+    for (let copy = 0; copy < copies; copy += 1) {
+      const target =
+        viewCenter - (copy * setWidth + starts[index] + widths[index] / 2);
+      const dist = Math.abs(target - current);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = target;
+      }
+    }
+    x.set(best);
+    applyTransforms();
+  }, [applyTransforms, copies, items, layout, startId, view.width, x]);
+
   useEffect(() => {
     dialogRef.current?.focus();
 
@@ -757,25 +1301,122 @@ function ShowcaseZoomOverlay({
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (leavingRef.current) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        requestClose();
+        return;
+      }
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (itemsRef.current.length < 2) return;
       event.preventDefault();
       event.stopPropagation();
-      requestClose();
+      interruptSnap();
+      const index = Math.max(
+        0,
+        itemsRef.current.findIndex((item) => item._id === activeIdRef.current),
+      );
+      snapToIndex(index + (event.key === "ArrowRight" ? 1 : -1));
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (leavingRef.current) return;
+      event.preventDefault();
+      if (itemsRef.current.length < 2) return;
+      if (draggingRef.current) return;
+      releaseWheelBurst();
+      if (wheelBurstRef.current || snappingRef.current) return;
+      const delta = wheelDelta(event);
+      if (delta === 0) return;
+      wheelBurstRef.current = true;
+      const index = Math.max(
+        0,
+        itemsRef.current.findIndex((item) => item._id === activeIdRef.current),
+      );
+      snapToIndex(index + (delta > 0 ? 1 : -1));
     };
 
     window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       html.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("wheel", onWheel);
+      if (snapTimerRef.current !== null)
+        window.clearTimeout(snapTimerRef.current);
+      if (wheelIdleTimerRef.current !== null)
+        window.clearTimeout(wheelIdleTimerRef.current);
+      snapAnimationRef.current?.stop();
     };
-  }, [requestClose]);
+  }, [interruptSnap, releaseWheelBurst, requestClose, snapToIndex]);
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (leavingRef.current || event.button !== 0) return;
+    interruptSnap();
+    draggingRef.current = false;
+    dragMovedRef.current = 0;
+    pointerRef.current = {
+      id: event.pointerId,
+      lastX: event.clientX,
+      lastY: event.clientY,
+    };
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const pointer = pointerRef.current;
+    if (!pointer || pointer.id !== event.pointerId) return;
+    const dx = event.clientX - pointer.lastX;
+    const dy = event.clientY - pointer.lastY;
+    pointer.lastX = event.clientX;
+    pointer.lastY = event.clientY;
+    dragMovedRef.current += Math.hypot(dx, dy);
+    if (!draggingRef.current && dragMovedRef.current > DRAG_CLICK_THRESHOLD) {
+      draggingRef.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      beginGesture();
+    }
+    if (draggingRef.current && itemsRef.current.length > 1) {
+      x.set(clampLiveX(x.get() + dx));
+    }
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const pointer = pointerRef.current;
+    if (!pointer || pointer.id !== event.pointerId) return;
+    const dragged = draggingRef.current;
+    pointerRef.current = null;
+    draggingRef.current = false;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (event.type === "pointercancel") {
+      if (dragged) scheduleSnap();
+      return;
+    }
+    if (dragged) {
+      scheduleSnap();
+      return;
+    }
+    if ((event.target as HTMLElement | null)?.closest("a")) return;
+    const id = (event.target as HTMLElement | null)
+      ?.closest("[data-id]")
+      ?.getAttribute("data-id");
+    if (id && id !== activeIdRef.current) {
+      const index = itemsRef.current.findIndex((item) => item._id === id);
+      if (index >= 0) {
+        snapToIndex(index);
+        return;
+      }
+    }
+    requestClose();
+  };
 
   const zoomInTransition = reduceMotion ? { duration: 0 } : appearScale;
   const zoomOutTransition = reduceMotion ? { duration: 0 } : scaleOut;
-
   const titleId = "showcase-zoom-title";
-  const descriptionId = item.description
+  const descriptionId = active?.description
     ? "showcase-zoom-description"
     : undefined;
 
@@ -787,12 +1428,16 @@ function ShowcaseZoomOverlay({
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
       tabIndex={-1}
-      className="fixed inset-0 z-[80] flex cursor-zoom-out items-center justify-center overflow-y-auto overflow-x-hidden p-4 outline-none md:p-10"
-      onClick={requestClose}
+      className="fixed inset-0 z-[80] cursor-zoom-out overflow-hidden overscroll-none select-none outline-none"
+      style={{ touchAction: "none" }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
     >
       <div className="fixed inset-0 bg-background/80 backdrop-blur-2xl" />
       <motion.div
-        className="relative z-[1] flex max-h-full max-w-full origin-center flex-col items-center gap-6 will-change-transform md:block md:gap-0"
+        className="relative z-[1] flex h-full w-full origin-center items-center will-change-transform"
         initial={reduceMotion ? false : { scale: 0.9 }}
         animate={{ scale: leaving ? 0.9 : 1 }}
         transition={leaving ? zoomOutTransition : zoomInTransition}
@@ -800,13 +1445,74 @@ function ShowcaseZoomOverlay({
           if (leavingRef.current) onClose();
         }}
       >
-        <ShowcaseZoomMedia item={item} />
-        <ShowcaseCaption
-          item={item}
-          titleId={titleId}
-          descriptionId={descriptionId}
-          layout="overlay"
-        />
+        <div
+          ref={containerRef}
+          className="relative flex h-full w-full items-center"
+        >
+          <motion.div
+            className="flex items-center will-change-transform"
+            style={{ x, gap }}
+          >
+            {loopItems.map(({ item, copy }, loopIndex) => {
+              const size = zoomItemSize(
+                item,
+                bounds.maxWidth,
+                bounds.maxHeight,
+              );
+              const total = loopItems.length;
+              const dist = Math.abs(loopIndex - centeredLoopIndex);
+              const near =
+                total > 0
+                  ? Math.min(dist, total - dist) <= 1
+                  : loopIndex === centeredLoopIndex;
+              const centered = loopIndex === centeredLoopIndex;
+              const indexInSet = items.findIndex(
+                (entry) => entry._id === item._id,
+              );
+
+              return (
+                <div
+                  key={`${item._id}-${copy}`}
+                  ref={(el) => {
+                    cardRefs.current[loopIndex] = el;
+                    cardRefs.current.length = loopItems.length;
+                  }}
+                  data-id={item._id}
+                  data-index={indexInSet}
+                  className="relative w-full shrink-0 overflow-visible"
+                  style={{ width: size.width }}
+                  aria-hidden={centered ? undefined : true}
+                >
+                  {near ? (
+                    <div className="relative flex w-full flex-col items-center gap-6 overflow-visible md:block">
+                      <ShowcaseZoomMedia
+                        item={item}
+                        play={centered}
+                        size={size}
+                      />
+                      <div
+                        className={
+                          centered ? undefined : "invisible pointer-events-none"
+                        }
+                      >
+                        <ShowcaseCaption
+                          item={item}
+                          titleId={centered ? titleId : undefined}
+                          descriptionId={
+                            centered ? descriptionId : undefined
+                          }
+                          layout="overlay"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ height: size.height }} />
+                  )}
+                </div>
+              );
+            })}
+          </motion.div>
+        </div>
       </motion.div>
     </div>
   );
@@ -834,7 +1540,7 @@ function ShowcaseCaption({
     <div
       className={
         overlay
-          ? "flex w-full max-w-sm flex-col gap-2 text-center md:absolute md:top-1/2 md:left-[calc(100%+1.5rem)] md:w-max md:max-w-[calc((100vw-100%)/2-1.5rem)] md:-translate-y-1/2 md:text-left"
+          ? "relative left-1/2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-2 text-center md:absolute md:top-1/2 md:left-[calc(100%+1.5rem)] md:max-w-[calc((100vw-100%)/2-2.5rem)] md:translate-x-0 md:-translate-y-1/2 md:text-left"
           : "flex flex-col gap-2 text-center"
       }
     >
@@ -857,16 +1563,13 @@ function ShowcaseCaption({
           {item.description}
         </p>
       ) : null}
-      {writingHref && linkedSlugText ? (
+      {overlay && writingHref && linkedSlugText ? (
         <MotionLink
           href={writingHref}
-          className={
-            overlay
-              ? "inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
-              : "inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued"
-          }
+          className="inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
           whileHover={{ opacity: 0.6 }}
           transition={hoverSpring}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
           {linkedSlugText}
@@ -877,23 +1580,52 @@ function ShowcaseCaption({
   );
 }
 
-function ShowcaseZoomMedia({ item }: { item: ScreenshotItem }) {
+function ShowcaseZoomMedia({
+  item,
+  play = true,
+  size,
+}: {
+  item: ScreenshotItem;
+  play?: boolean;
+  size?: CardSize;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const videoUrl = item.video?.asset?.url ?? null;
   const image = item.image?.asset ? item.image : null;
   const alt = item.alt || item.title;
+  const mediaStyle = size
+    ? {
+        width: size.width,
+        height: size.height,
+        maxWidth: "none",
+        maxHeight: "none",
+      }
+    : undefined;
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (play) {
+      void el.play().catch(() => {});
+      return;
+    }
+    el.pause();
+  }, [play, videoUrl]);
 
   if (videoUrl) {
     return (
       <video
+        ref={videoRef}
         src={videoUrl}
         poster={screenshotMediaUrl(image) ?? undefined}
-        autoPlay
+        autoPlay={play}
         muted
         loop
         playsInline
         controls={false}
         aria-label={alt}
         className="showcase-zoom-media"
+        style={mediaStyle}
       />
     );
   }
@@ -913,6 +1645,7 @@ function ShowcaseZoomMedia({ item }: { item: ScreenshotItem }) {
       height={height}
       draggable={false}
       className="showcase-zoom-media"
+      style={mediaStyle}
     />
   );
 }
