@@ -1,6 +1,6 @@
 "use client";
 
-import { snappySpring } from "@/lib/motion";
+import { appearScale, scaleOut, snappySpring } from "@/lib/motion";
 import {
   PHONE_ASPECT,
   SCREENSHOT_IMAGE_SIZES,
@@ -746,6 +746,18 @@ function ShowcaseZoomOverlay({
   reduceMotion: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const leavingRef = useRef(false);
+  const [leaving, setLeaving] = useState(false);
+
+  const requestClose = useCallback(() => {
+    if (leavingRef.current) return;
+    if (reduceMotion) {
+      onClose();
+      return;
+    }
+    leavingRef.current = true;
+    setLeaving(true);
+  }, [onClose, reduceMotion]);
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -760,7 +772,7 @@ function ShowcaseZoomOverlay({
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      onClose();
+      requestClose();
     };
 
     window.addEventListener("keydown", onKeyDown, true);
@@ -769,11 +781,10 @@ function ShowcaseZoomOverlay({
       document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [onClose]);
+  }, [requestClose]);
 
-  const zoomTransition = reduceMotion
-    ? { duration: 0 }
-    : { duration: 0.08, ease: [0.32, 0.72, 0, 1] as const };
+  const zoomInTransition = reduceMotion ? { duration: 0 } : appearScale;
+  const zoomOutTransition = reduceMotion ? { duration: 0 } : scaleOut;
 
   return (
     <div
@@ -783,21 +794,17 @@ function ShowcaseZoomOverlay({
       aria-label={`${item.title}, enlarged`}
       tabIndex={-1}
       className="fixed inset-0 z-[80] flex cursor-zoom-out items-center justify-center overflow-hidden p-4 outline-none md:p-10"
-      onClick={onClose}
+      onClick={requestClose}
     >
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl" />
       <motion.div
-        className="absolute inset-0 bg-background/80 backdrop-blur-2xl"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={zoomTransition}
-      />
-      <motion.div
-        className="relative max-h-full max-w-full"
-        initial={reduceMotion ? false : { scale: 0.96 }}
-        animate={{ scale: 1 }}
-        exit={reduceMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0 }}
-        transition={zoomTransition}
+        className="relative max-h-full max-w-full origin-center will-change-transform"
+        initial={reduceMotion ? false : { scale: 0.9 }}
+        animate={{ scale: leaving ? 0.9 : 1 }}
+        transition={leaving ? zoomOutTransition : zoomInTransition}
+        onAnimationComplete={() => {
+          if (leavingRef.current) onClose();
+        }}
       >
         <ShowcaseZoomMedia item={item} />
       </motion.div>

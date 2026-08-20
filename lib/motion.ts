@@ -28,6 +28,11 @@ export const appearScale = {
   ease: [0.32, 0.72, 0, 1] as const,
 } as const;
 
+export const scaleOut = {
+  duration: 0.2,
+  ease: [0.4, 0, 1, 1] as const,
+} as const;
+
 export const cursorScaleEase = {
   duration: 0.2,
   ease: [0.32, 0.72, 0, 1] as const,
