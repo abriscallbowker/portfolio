@@ -9,6 +9,14 @@ const CLICK_SCALE = 0.8;
 const DESKTOP_CURSOR_QUERY =
   "(hover: hover) and (pointer: fine) and (min-width: 1200px)";
 
+function isSafariBrowser() {
+  return (
+    Boolean(navigator.vendor) &&
+    navigator.vendor.includes("Apple") &&
+    !/CriOS|FxiOS/i.test(navigator.userAgent)
+  );
+}
+
 export function CustomCursor() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -69,7 +77,7 @@ export function CustomCursor() {
     };
 
     const sync = () => {
-      if (media.matches) enable();
+      if (media.matches && !isSafariBrowser()) enable();
       else disable();
     };
 
