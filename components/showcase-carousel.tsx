@@ -328,7 +328,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     const rotRadius = Math.max(220, avgStride / SLOT_ANGLE);
     const flatten = reduceMotionRef.current;
 
-    if (setWidth > 0 && !snappingRef.current) {
+    if (setWidth > 0) {
       x.set(wrapX(x.get(), setWidth));
     }
 
@@ -351,13 +351,17 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const translateX = flatten
         ? 0
         : (rotRadius * Math.sin(theta) - dx) * 0.85;
-      const edgeDistance = Math.abs(dx) - width / 2;
+      const dist = Math.abs(dx);
+      const wrapDist =
+        setWidth > 0 ? Math.min(dist, Math.abs(dist - setWidth)) : dist;
+      const edgeDistance = dist - width / 2;
+      const wrapEdge = wrapDist - width / 2;
       const slot = avgStride > 0 ? Math.max(0, edgeDistance) / avgStride : 0;
       const fadeT = Math.max(0, Math.min(1, (slot - fullSlots) / fadeSlots));
       const opacity =
         fadeT <= 0 ? 1 : fadeT >= 1 ? 0 : 1 - fadeT * fadeT * (3 - 2 * fadeT);
       const interactive = opacity > 0.2;
-      const offscreen = edgeDistance > viewWidth;
+      const offscreen = wrapEdge > viewWidth;
 
       el.style.transform = flatten
         ? "none"
@@ -372,7 +376,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         el.parentElement.style.pointerEvents = interactive ? "auto" : "none";
       }
 
-      const dist = Math.abs(dx);
       const id = el.dataset.id ?? null;
       if (id && dist < closestDist) {
         closestDist = dist;
@@ -392,6 +395,42 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     if (itemsRef.current.length === 0) return;
     applyTransforms();
   });
+
+  const animateSnap = useCallback(
+    (target: number) => {
+      const from = x.get();
+      if (!Number.isFinite(target) || Math.abs(target - from) < 1) return;
+
+      snapAnimationRef.current?.stop();
+      snappingRef.current = true;
+      const animation = animate(from, target, {
+        ...snappySpring,
+        onUpdate: (latest) => {
+          const opts = layoutOptsRef.current;
+          const { setWidth } = layoutSet(
+            itemsRef.current,
+            cardGap(opts.md),
+            opts,
+          );
+          x.set(wrapX(latest, setWidth));
+        },
+      });
+      snapAnimationRef.current = animation;
+      void animation.then(() => {
+        if (snapAnimationRef.current !== animation) return;
+        const latest = layoutSet(
+          itemsRef.current,
+          cardGap(layoutOptsRef.current.md),
+          layoutOptsRef.current,
+        );
+        x.set(wrapX(x.get(), latest.setWidth));
+        snappingRef.current = false;
+        snapAnimationRef.current = null;
+        applyTransforms();
+      });
+    },
+    [applyTransforms, x],
+  );
 
   const snapToClosest = useCallback(() => {
     const container = containerRef.current;
@@ -418,25 +457,8 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       cursor += width + currentGap;
     });
 
-    if (!Number.isFinite(bestTarget) || bestDist < 1) return;
-
-    snapAnimationRef.current?.stop();
-    snappingRef.current = true;
-    const animation = animate(x, bestTarget, snappySpring);
-    snapAnimationRef.current = animation;
-    void animation.then(() => {
-      if (snapAnimationRef.current !== animation) return;
-      const latest = layoutSet(
-        itemsRef.current,
-        cardGap(layoutOptsRef.current.md),
-        layoutOptsRef.current,
-      );
-      x.set(wrapX(x.get(), latest.setWidth));
-      snappingRef.current = false;
-      snapAnimationRef.current = null;
-      applyTransforms();
-    });
-  }, [applyTransforms, x]);
+    animateSnap(bestTarget);
+  }, [animateSnap, x]);
 
   const scheduleSnap = useCallback(() => {
     if (snapTimerRef.current !== null)
@@ -500,24 +522,9 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         }
       }
 
-      snappingRef.current = true;
-      snapAnimationRef.current?.stop();
-      const animation = animate(x, best, snappySpring);
-      snapAnimationRef.current = animation;
-      void animation.then(() => {
-        if (snapAnimationRef.current !== animation) return;
-        const latest = layoutSet(
-          itemsRef.current,
-          cardGap(layoutOptsRef.current.md),
-          layoutOptsRef.current,
-        );
-        x.set(wrapX(x.get(), latest.setWidth));
-        snappingRef.current = false;
-        snapAnimationRef.current = null;
-        applyTransforms();
-      });
+      animateSnap(best);
     },
-    [applyTransforms, x],
+    [animateSnap, x],
   );
 
   const onSelect = useCallback(
