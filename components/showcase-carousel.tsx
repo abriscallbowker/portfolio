@@ -35,7 +35,9 @@ const LAPTOP_ASPECT = 16 / 10;
 const SLOT_ANGLE = (42 * Math.PI) / 180;
 const MAX_THETA = (70 * Math.PI) / 180;
 const DEPTH_PAD = 56;
-const DEVICE_DEPTH_LAYERS = 8;
+const PHONE_DEPTH_LAYERS = 6;
+const LAPTOP_DEPTH_LAYERS = 4;
+const DEPTH_LAYER_GAP = 2;
 const MIN_CARD_HEIGHT = 140;
 const MOBILE_LAPTOP_INSET = 32;
 const CAPTION_RESERVE = 128;
@@ -694,16 +696,26 @@ function ShowcaseDevice({
       </div>
       {depthSrc && !reduceMotion ? (
         <div className="showcase-card-depth" aria-hidden="true">
-          {Array.from({ length: DEVICE_DEPTH_LAYERS }, (_, index) => (
-            <img
-              key={index}
-              src={depthSrc}
-              alt=""
-              draggable={false}
-              decoding="async"
-              style={{ transform: `translateZ(${(-index - 1) * 2}px)` }}
-            />
-          ))}
+          {Array.from(
+            {
+              length:
+                item.type === "laptop"
+                  ? LAPTOP_DEPTH_LAYERS
+                  : PHONE_DEPTH_LAYERS,
+            },
+            (_, index) => (
+              <img
+                key={index}
+                src={depthSrc}
+                alt=""
+                draggable={false}
+                decoding="async"
+                style={{
+                  transform: `translateZ(${(-index - 1) * DEPTH_LAYER_GAP}px)`,
+                }}
+              />
+            ),
+          )}
         </div>
       ) : null}
     </>
