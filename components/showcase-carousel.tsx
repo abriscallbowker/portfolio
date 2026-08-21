@@ -1050,7 +1050,6 @@ function ShowcaseZoomOverlay({
         );
         x.set(itemsRef.current.length > 1 ? wrapX(target, setWidth) : target);
         snappingRef.current = false;
-        applyTransforms();
         return;
       }
 
@@ -1063,26 +1062,17 @@ function ShowcaseZoomOverlay({
       snapAnimationRef.current = animation;
       void animation.then(() => {
         if (snapAnimationRef.current !== animation) return;
-        const { maxWidth, maxHeight } = zoomMediaBounds(
-          mdRef.current,
-          containerRef.current?.clientWidth ?? viewRef.current.width,
-          viewRef.current.height,
-        );
-        const latest = zoomLayoutSet(
-          itemsRef.current,
-          zoomGap(mdRef.current),
-          maxWidth,
-          maxHeight,
-        );
-        if (itemsRef.current.length > 1) {
-          x.set(wrapX(x.get(), latest.setWidth));
-        }
+        // Deliberately no wrap or style writes here: this promise callback
+        // is a microtask that lands after the frame loop has rendered, so a
+        // wrapped x plus direct style writes would paint one frame with the
+        // new opacities but the old track transform (a visible blank flash
+        // whenever the loop wraps). The per-frame applyTransforms wraps x
+        // inside the frame loop instead, keeping both in the same paint.
         snappingRef.current = false;
         snapAnimationRef.current = null;
-        applyTransforms();
       });
     },
-    [applyTransforms, x],
+    [x],
   );
 
   const snapToIndex = useCallback(
@@ -1492,6 +1482,10 @@ function ShowcaseZoomOverlay({
               const setDist = Math.abs(indexInSet - centeredSetIndex);
               const near = n > 0 ? Math.min(setDist, n - setDist) <= 1 : false;
               const centered = loopIndex === centeredLoopIndex;
+              // Copy-equivalents of the centered card render their caption
+              // too (their card is transparent when off-center), so a loop
+              // wrap that swaps copies never blinks the caption.
+              const captionVisible = indexInSet === centeredSetIndex;
 
               return (
                 <div
@@ -1515,7 +1509,9 @@ function ShowcaseZoomOverlay({
                       />
                       <div
                         className={
-                          centered ? undefined : "invisible pointer-events-none"
+                          captionVisible
+                            ? undefined
+                            : "invisible pointer-events-none"
                         }
                       >
                         <ShowcaseCaption
@@ -1613,9 +1609,11 @@ function ShowcaseZoomMedia({
   size?: CardSize;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const videoUrl = item.video?.asset?.url ?? null;
   const image = item.image?.asset ? item.image : null;
   const alt = item.alt || item.title;
+  const src = screenshotMediaUrl(image);
   const mediaStyle = size
     ? {
         width: size.width,
@@ -1635,12 +1633,19 @@ function ShowcaseZoomMedia({
     el.pause();
   }, [play, videoUrl]);
 
+  // Copies of this image can sit hidden until a loop wrap reveals them;
+  // decode eagerly so that first reveal never paints an undecoded frame.
+  useEffect(() => {
+    if (videoUrl || !src) return;
+    void imgRef.current?.decode().catch(() => {});
+  }, [src, videoUrl]);
+
   if (videoUrl) {
     return (
       <video
         ref={videoRef}
         src={videoUrl}
-        poster={screenshotMediaUrl(image) ?? undefined}
+        poster={src ?? undefined}
         autoPlay={play}
         muted
         loop
@@ -1653,15 +1658,13 @@ function ShowcaseZoomMedia({
     );
   }
 
-  if (!image?.asset) return null;
-
-  const src = screenshotMediaUrl(image);
-  if (!src) return null;
+  if (!image?.asset || !src) return null;
 
   const { width, height } = screenshotImageSize(image);
 
   return (
     <img
+      ref={imgRef}
       src={src}
       alt={alt}
       width={width}
