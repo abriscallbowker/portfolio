@@ -369,3 +369,18 @@ body {
     max-height: calc(100dvh - 5rem);
   }
 }
+
+/* Safari-only (Chrome and Firefox don't parse -webkit-hyphens): the large
+   backdrop blur and media drop-shadow are expensive and render poorly
+   there, so use a fully opaque backdrop with no blur and no shadow. */
+@supports (-webkit-hyphens: none) {
+  .showcase-zoom-backdrop {
+    background-color: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .showcase-zoom-media {
+    filter: none;
+  }
+}

@@ -1446,7 +1446,7 @@ function ShowcaseZoomOverlay({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-2xl" />
+      <div className="showcase-zoom-backdrop fixed inset-0 bg-background/80 backdrop-blur-2xl" />
       <motion.div
         className="relative z-[1] flex h-full w-full origin-center items-center will-change-transform"
         initial={reduceMotion ? false : { scale: 0.9 }}
