@@ -17,7 +17,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import { ChevronRightIcon } from "@heroicons/react/16/solid";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import {
   useCallback,
@@ -240,18 +240,20 @@ function zoomStepStride(
   return widths[fromIndex] / 2 + gap + widths[toIndex] / 2;
 }
 
+function subscribeToMdQuery(onChange: () => void) {
+  const media = window.matchMedia(MD_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
 function useIsMd() {
-  const [md, setMd] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia(MD_QUERY);
-    const sync = () => setMd(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  return md;
+  // Synchronous snapshot so the first client render already matches the
+  // viewport; a lagging useEffect would paint one frame at the wrong layout.
+  return useSyncExternalStore(
+    subscribeToMdQuery,
+    () => window.matchMedia(MD_QUERY).matches,
+    () => false,
+  );
 }
 
 function useCarouselBudget(
@@ -387,40 +389,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     initializedRef.current = false;
   }, [items.length]);
 
-  useLayoutEffect(() => {
-    if (items.length === 0 || containerWidth <= 0) return;
-    const { setWidth, widths, starts } = layout;
-    if (setWidth <= 0 || widths.length === 0) return;
-
-    const viewCenter = containerWidth / 2;
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      x.set(-setWidth + viewCenter - widths[0] / 2);
-      setActiveId(items[0]._id);
-      return;
-    }
-
-    if (draggingRef.current || snappingRef.current) return;
-
-    const index = Math.max(
-      0,
-      items.findIndex((item) => item._id === activeIdRef.current),
-    );
-    const current = x.get();
-    let best = current;
-    let bestDist = Infinity;
-    for (let copy = 0; copy < copies; copy += 1) {
-      const target =
-        viewCenter - (copy * setWidth + starts[index] + widths[index] / 2);
-      const dist = Math.abs(target - current);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = target;
-      }
-    }
-    x.set(best);
-  }, [containerWidth, copies, items, layout, x]);
-
   const applyTransforms = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -498,6 +466,44 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       setActiveId(closestId);
     }
   }, [x]);
+
+  useLayoutEffect(() => {
+    if (items.length === 0 || containerWidth <= 0) return;
+    const { setWidth, widths, starts } = layout;
+    if (setWidth <= 0 || widths.length === 0) return;
+
+    const viewCenter = containerWidth / 2;
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      x.set(-setWidth + viewCenter - widths[0] / 2);
+      setActiveId(items[0]._id);
+      // Paint the first frame with transforms already applied instead of
+      // waiting for the next animation frame.
+      applyTransforms();
+      return;
+    }
+
+    if (draggingRef.current || snappingRef.current) return;
+
+    const index = Math.max(
+      0,
+      items.findIndex((item) => item._id === activeIdRef.current),
+    );
+    const current = x.get();
+    let best = current;
+    let bestDist = Infinity;
+    for (let copy = 0; copy < copies; copy += 1) {
+      const target =
+        viewCenter - (copy * setWidth + starts[index] + widths[index] / 2);
+      const dist = Math.abs(target - current);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = target;
+      }
+    }
+    x.set(best);
+    applyTransforms();
+  }, [applyTransforms, containerWidth, copies, items, layout, x]);
 
   useAnimationFrame(() => {
     if (itemsRef.current.length === 0) return;
@@ -988,10 +994,12 @@ function ShowcaseZoomOverlay({
       const show =
         loopIndex === closestLoop ||
         (live && (loopIndex === fromLoop || incoming));
+      // Full opacity within a small plateau around center so the snap
+      // spring's overshoot doesn't dip the settled image's opacity.
+      const plateau = Math.max(width * 0.1, 48);
       const fadeRange = Math.max(width * 0.45, 64);
-      const opacity = show
-        ? Math.max(0, 1 - Math.abs(dx) / fadeRange)
-        : 0;
+      const fade = Math.max(0, Math.abs(dx) - plateau) / fadeRange;
+      const opacity = show ? Math.max(0, 1 - fade) : 0;
       el.style.opacity = String(opacity);
       el.style.visibility = opacity > 0.02 ? "visible" : "hidden";
       el.style.pointerEvents =
@@ -1472,16 +1480,18 @@ function ShowcaseZoomOverlay({
                 bounds.maxWidth,
                 bounds.maxHeight,
               );
-              const total = loopItems.length;
-              const dist = Math.abs(loopIndex - centeredLoopIndex);
-              const near =
-                total > 0
-                  ? Math.min(dist, total - dist) <= 1
-                  : loopIndex === centeredLoopIndex;
-              const centered = loopIndex === centeredLoopIndex;
               const indexInSet = items.findIndex(
                 (entry) => entry._id === item._id,
               );
+              // Mount media by wrapped set-index distance so every copy of
+              // the centered item and its neighbors stays mounted; when the
+              // track wraps to another copy, the newly centered element
+              // already has its media and doesn't blink while remounting.
+              const n = items.length;
+              const centeredSetIndex = n > 0 ? centeredLoopIndex % n : 0;
+              const setDist = Math.abs(indexInSet - centeredSetIndex);
+              const near = n > 0 ? Math.min(setDist, n - setDist) <= 1 : false;
+              const centered = loopIndex === centeredLoopIndex;
 
               return (
                 <div
@@ -1664,6 +1674,29 @@ function ShowcaseZoomMedia({
 }
 
 
+// Depth layers reuse the exact resource the front face renders (the
+// optimized next/image candidates, or the raw poster URL for videos) so
+// they come straight from cache instead of triggering a second download.
+function depthImageProps(item: ScreenshotItem) {
+  const image = item.image?.asset ? item.image : null;
+  const src = screenshotMediaUrl(image);
+  if (!image || !src) return null;
+
+  if (item.video?.asset?.url) {
+    return { src };
+  }
+
+  const { width, height } = screenshotImageSize(image);
+  const { props } = getImageProps({
+    src,
+    alt: "",
+    width,
+    height,
+    sizes: SCREENSHOT_IMAGE_SIZES,
+  });
+  return { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
+}
+
 function ShowcaseDevice({
   item,
   reduceMotion,
@@ -1671,14 +1704,14 @@ function ShowcaseDevice({
   item: ScreenshotItem;
   reduceMotion: boolean;
 }) {
-  const depthSrc = screenshotMediaUrl(item.image);
+  const depth = depthImageProps(item);
 
   return (
     <>
       <div className="showcase-card-front">
         <ShowcaseMedia item={item} />
       </div>
-      {depthSrc && !reduceMotion ? (
+      {depth && !reduceMotion ? (
         <div className="showcase-card-depth" aria-hidden="true">
           {Array.from(
             {
@@ -1690,7 +1723,7 @@ function ShowcaseDevice({
             (_, index) => (
               <img
                 key={index}
-                src={depthSrc}
+                {...depth}
                 alt=""
                 draggable={false}
                 decoding="async"
@@ -1705,6 +1738,11 @@ function ShowcaseDevice({
     </>
   );
 }
+
+// Images that have finished loading once this session; skipping the blur
+// placeholder on remount avoids an LQIP flash every time the gallery tab
+// is revisited.
+const loadedImageSrcs = new Set<string>();
 
 function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
   const videoUrl = item.video?.asset?.url ?? null;
@@ -1721,6 +1759,7 @@ function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
   if (!src) return null;
 
   const { width, height } = screenshotImageSize(image);
+  const blur = Boolean(image.asset.metadata?.lqip) && !loadedImageSrcs.has(src);
 
   return (
     <Image
@@ -1729,9 +1768,10 @@ function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
       width={width}
       height={height}
       draggable={false}
-      placeholder={image.asset.metadata?.lqip ? "blur" : "empty"}
-      blurDataURL={image.asset.metadata?.lqip}
+      placeholder={blur ? "blur" : "empty"}
+      blurDataURL={blur ? image.asset.metadata?.lqip : undefined}
       sizes={SCREENSHOT_IMAGE_SIZES}
+      onLoad={() => loadedImageSrcs.add(src)}
       className="pointer-events-none size-full object-cover"
     />
   );
