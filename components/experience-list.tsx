@@ -48,7 +48,7 @@ function CompanyBadge({item}: {item: ExperienceItem}) {
         {showTooltip && item.tooltip && (
           <motion.span
             role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-body-xs text-white shadow-md"
+            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-2 py-1 text-body-xs text-ink shadow-xs"
             initial={{opacity: 0, y: 4, x: "-50%"}}
             animate={{opacity: 1, y: 0, x: "-50%"}}
             exit={{opacity: 0, y: 4, x: "-50%"}}
