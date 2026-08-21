@@ -18,6 +18,17 @@ const tabSlideVariants = {
   }),
 };
 
+// The gallery's imagery reads as clutter when it lingers over incoming
+// text-heavy tabs, so it fades out near-instantly instead of sliding.
+const gallerySlideVariants = {
+  ...tabSlideVariants,
+  exit: {
+    opacity: 0,
+    pointerEvents: "none" as const,
+    transition: {duration: 0.1, ease: "easeOut"} as const,
+  },
+};
+
 function tabIndex(segment: string | null) {
   if (segment === "about") return 1;
   if (segment === "gallery") return 2;
@@ -87,7 +98,7 @@ export function PageFade({children}: {children: ReactNode}) {
             key={segment ?? "archive"}
             className="col-start-1 row-start-1 w-full"
             custom={direction}
-            variants={tabSlideVariants}
+            variants={segment === "gallery" ? gallerySlideVariants : tabSlideVariants}
             initial="enter"
             animate="center"
             exit="exit"
