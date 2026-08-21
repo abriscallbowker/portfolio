@@ -1585,14 +1585,20 @@ function ShowcaseCaption({
       {overlay && writingHref && linkedSlugText ? (
         <MotionLink
           href={writingHref}
-          className="inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
+          className="group inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
           whileHover={{ opacity: 0.6 }}
           transition={hoverSpring}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
           {linkedSlugText}
-          <ChevronRightIcon className="size-3.5" aria-hidden />
+          {/* Safari ignores the individual `translate` property on SVG
+              elements, so use the full `transform` property instead of
+              Tailwind's translate-x utility. */}
+          <ChevronRightIcon
+            className="size-3.5 transition-transform duration-300 ease-out group-hover:[transform:translateX(2px)]"
+            aria-hidden
+          />
         </MotionLink>
       ) : null}
     </div>
