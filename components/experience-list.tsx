@@ -1,9 +1,66 @@
 "use client";
 
 import {hoverSpring} from "@/lib/motion";
-import {experience} from "@/lib/site";
-import {motion} from "motion/react";
+import {experience, type ExperienceItem} from "@/lib/site";
+import {AnimatePresence, motion} from "motion/react";
 import Image from "next/image";
+import {useState} from "react";
+
+function CompanyBadge({item}: {item: ExperienceItem}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const content = (
+    <>
+      <Image
+        src={item.logo}
+        alt=""
+        width={20}
+        height={20}
+        className="size-5 rounded-[4px] object-cover"
+      />
+      <span className="text-body-md text-ink">{item.company}</span>
+    </>
+  );
+
+  if (item.href) {
+    return (
+      <motion.a
+        href={item.href}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-md px-[5px]"
+        whileHover={{opacity: 0.6}}
+        transition={hoverSpring}
+      >
+        {content}
+      </motion.a>
+    );
+  }
+
+  return (
+    <span
+      className="relative inline-flex items-center gap-1.5 rounded-md px-[5px]"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {content}
+      <AnimatePresence>
+        {showTooltip && item.tooltip && (
+          <motion.span
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-body-xs text-white shadow-md"
+            initial={{opacity: 0, y: 4, x: "-50%"}}
+            animate={{opacity: 1, y: 0, x: "-50%"}}
+            exit={{opacity: 0, y: 4, x: "-50%"}}
+            transition={hoverSpring}
+          >
+            {item.tooltip}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </span>
+  );
+}
 
 export function ExperienceList() {
   return (
@@ -17,23 +74,7 @@ export function ExperienceList() {
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             <span className="text-body-md text-ink">{item.role}</span>
             <span className="text-body-md text-ink">at</span>
-            <motion.a
-              href={item.href}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md px-[5px]"
-              whileHover={{opacity: 0.6}}
-              transition={hoverSpring}
-            >
-              <Image
-                src={item.logo}
-                alt=""
-                width={20}
-                height={20}
-                className="size-5 rounded-[4px] object-cover"
-              />
-              <span className="text-body-md text-ink">{item.company}</span>
-            </motion.a>
+            <CompanyBadge item={item} />
           </div>
         </li>
       ))}

@@ -8,12 +8,21 @@ export const site = {
   ogImage: "https://alexbowker.com/cover.jpg",
 };
 
-export const experience = [
+export type ExperienceItem = {
+  duration: string;
+  role: string;
+  company: string;
+  logo: string;
+  href?: string;
+  tooltip?: string;
+};
+
+export const experience: ExperienceItem[] = [
   {
     duration: "2024 — NOW",
     role: "Founder",
     company: "Visual Binary",
-    href: "https://visualbinary.com",
+    tooltip: "My own digital product studio",
     logo: "https://framerusercontent.com/images/VJVHJAn4h1R6CjRW6a5opRCWSC0.jpg",
   },
   {
