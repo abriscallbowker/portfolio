@@ -222,6 +222,11 @@ body {
   .home-button {
     top: 16px;
     left: 16px;
+    transition: left 0.2s ease;
+  }
+
+  .home-button.is-scrolled {
+    left: 24px;
   }
 }
 

@@ -85,7 +85,9 @@ export default async function WritingPage({params}: WritingPageProps) {
                   {words} words
                 </span>
               </div>
-              <h1 className="text-heading-1 text-ink">{article.title}</h1>
+              <h1 className="max-w-[80%] text-heading-1 text-ink md:max-w-none">
+                {article.title}
+              </h1>
             </header>
             <PortableBody value={article.body} />
           </article>

@@ -2,7 +2,7 @@
 
 import {HomeIcon, TabBar} from "@/components/tab-bar";
 import {useRouter} from "next/navigation";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 
 type NavControlProps = {
   href: string;
@@ -24,6 +24,14 @@ export function NavControl({
 }: NavControlProps) {
   const router = useRouter();
   const shortcut = shortcutForIcon[icon];
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    onScroll();
+    window.addEventListener("scroll", onScroll, {passive: true});
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -52,7 +60,11 @@ export function NavControl({
   }, [href, router, shortcut]);
 
   return (
-    <TabBar href={href} aria-label={label} className="home-button">
+    <TabBar
+      href={href}
+      aria-label={label}
+      className={scrolled ? "home-button is-scrolled" : "home-button"}
+    >
       {icon === "info" ? <InfoIcon /> : icon === "close" ? <CloseIcon /> : <HomeIcon />}
     </TabBar>
   );
