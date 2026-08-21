@@ -39,6 +39,9 @@ const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
 const ZOOM_NAV_THRESHOLD = 64;
 const ZOOM_COPIES = 3;
+// Kept in sync with md:min-w-[250px] and the 2.5rem overlay caption max-width.
+const ZOOM_CAPTION_MIN_WIDTH = 250;
+const ZOOM_CAPTION_SIDE_PAD = 40;
 const LAPTOP_ASPECT = 16 / 10;
 const SLOT_ANGLE = (42 * Math.PI) / 180;
 const MAX_THETA = (70 * Math.PI) / 180;
@@ -158,8 +161,18 @@ function zoomMediaBounds(
   viewportWidth: number,
   viewportHeight: number,
 ) {
+  const captionReserve = md
+    ? 2 * (ZOOM_CAPTION_MIN_WIDTH + ZOOM_CAPTION_SIDE_PAD)
+    : 0;
   return {
-    maxWidth: Math.min(1200, Math.max(1, viewportWidth - (md ? 80 : 32))),
+    maxWidth: Math.max(
+      1,
+      Math.min(
+        1200,
+        viewportWidth - (md ? 80 : 32),
+        viewportWidth - captionReserve,
+      ),
+    ),
     maxHeight: Math.max(1, viewportHeight - (md ? 80 : 192)),
   };
 }
@@ -1540,7 +1553,7 @@ function ShowcaseCaption({
     <div
       className={
         overlay
-          ? "relative left-1/2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-2 text-center md:absolute md:top-1/2 md:left-[calc(100%+1.5rem)] md:max-w-[calc((100vw-100%)/2-2.5rem)] md:translate-x-0 md:-translate-y-1/2 md:text-left"
+          ? "relative left-1/2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-2 text-center md:absolute md:top-1/2 md:left-[calc(100%+1.5rem)] md:min-w-[250px] md:max-w-[max(250px,calc((100vw-100%)/2-2.5rem))] md:translate-x-0 md:-translate-y-1/2 md:text-left"
           : "flex flex-col gap-2 text-center"
       }
     >

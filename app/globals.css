@@ -324,7 +324,8 @@ body {
 
 @media (min-width: 810px) {
   .showcase-zoom-media {
-    max-width: min(1200px, calc(100vw - 5rem));
+    /* 580px = 2 × (250px caption min-width + 40px side pad) */
+    max-width: min(1200px, calc(100vw - 5rem), calc(100vw - 580px));
     max-height: calc(100dvh - 5rem);
   }
 }
