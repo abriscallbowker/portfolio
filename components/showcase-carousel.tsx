@@ -1,6 +1,7 @@
 "use client";
 
-import { appearScale, hoverSpring, scaleOut, snappySpring } from "@/lib/motion";
+import { HoverFadeOverlay } from "@/components/hover-fade-overlay";
+import { appearScale, scaleOut, snappySpring } from "@/lib/motion";
 import {
   PHONE_ASPECT,
   SCREENSHOT_IMAGE_SIZES,
@@ -1807,11 +1808,12 @@ function ShowcaseCaption({
       {writingHref && linkedSlugText ? (
         <MotionLink
           href={writingHref}
-          className={`group inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued ${
+          className={`group relative inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued ${
             overlay ? "md:self-start" : ""
           }`}
-          whileHover={{ opacity: 0.6 }}
-          transition={hoverSpring}
+          initial="rest"
+          animate="rest"
+          whileHover="hover"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
@@ -1823,6 +1825,7 @@ function ShowcaseCaption({
             className="size-3.5 transition-transform duration-300 ease-out group-hover:[transform:translateX(2px)]"
             aria-hidden
           />
+          <HoverFadeOverlay />
         </MotionLink>
       ) : null}
     </div>
