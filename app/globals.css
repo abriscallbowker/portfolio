@@ -303,21 +303,33 @@ body {
 }
 
 .showcase-carousel {
-  overflow-x: clip;
-  /* Constrained view: cards hard-clip at this boundary and the edge blur
-     strips sit just inside it. */
+  /* Constrained view: cards hard-clip at the inner view's boundary (the
+     overflow-x-clip element inside) and the edge blur strips overhang it. */
   max-width: min(1000px, 86vw);
 }
 
 /* Progressive blur at the clipped edges: two stacked backdrop-blur layers
    per side, each masked with a linear gradient so the blur ramps up toward
-   the edge instead of the cards fading out. */
+   the edge instead of the cards fading out.
+
+   The strips overhang the view's clip line by --edge-blur-overhang because
+   WebKit clamps a backdrop blur's sampling at the element's own boundary:
+   if that boundary sits exactly on the clip line, the abruptly-ending card
+   pixels get clamped and smeared into visible streaks (Safari on iPad/Mac).
+   With the overhang, the element's boundary sits over the plain page
+   background and the clip line falls inside the sampled region, so the
+   blur resolves cleanly. The extra area is invisible: blurred page
+   background over a solid page-color fill. Masking (unlike overflow
+   clipping) happens after the filter, so it doesn't reintroduce the
+   boundary. */
 .showcase-edge-blur {
+  --edge-blur-width: clamp(56px, 9vw, 128px);
+  --edge-blur-overhang: 56px;
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 10;
-  width: clamp(56px, 9vw, 128px);
+  width: calc(var(--edge-blur-width) + var(--edge-blur-overhang));
   pointer-events: none;
 }
 
@@ -328,7 +340,9 @@ body {
   inset: 0;
 }
 
-@media (max-width: 809px) {
+/* Full-bleed gallery (no clipping, no edge blur) on phones and tablets,
+   up to and including portrait 12.9" iPad Pro (1024px). */
+@media (max-width: 1024px) {
   .showcase-carousel {
     max-width: none;
   }
@@ -339,41 +353,81 @@ body {
 }
 
 .showcase-edge-blur--left {
-  left: 0;
-  background: linear-gradient(to right, var(--background), transparent);
+  left: calc(-1 * var(--edge-blur-overhang));
+  background: linear-gradient(
+    to right,
+    var(--background) var(--edge-blur-overhang),
+    transparent
+  );
 }
 
 .showcase-edge-blur--right {
-  right: 0;
-  background: linear-gradient(to left, var(--background), transparent);
+  right: calc(-1 * var(--edge-blur-overhang));
+  background: linear-gradient(
+    to left,
+    var(--background) var(--edge-blur-overhang),
+    transparent
+  );
 }
 
 .showcase-edge-blur--left::before {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  mask-image: linear-gradient(to right, black, transparent);
-  -webkit-mask-image: linear-gradient(to right, black, transparent);
+  mask-image: linear-gradient(
+    to right,
+    black var(--edge-blur-overhang),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--edge-blur-overhang),
+    transparent
+  );
 }
 
 .showcase-edge-blur--left::after {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  mask-image: linear-gradient(to right, black, transparent 55%);
-  -webkit-mask-image: linear-gradient(to right, black, transparent 55%);
+  mask-image: linear-gradient(
+    to right,
+    black var(--edge-blur-overhang),
+    transparent calc(var(--edge-blur-overhang) + 0.55 * var(--edge-blur-width))
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black var(--edge-blur-overhang),
+    transparent calc(var(--edge-blur-overhang) + 0.55 * var(--edge-blur-width))
+  );
 }
 
 .showcase-edge-blur--right::before {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  mask-image: linear-gradient(to left, black, transparent);
-  -webkit-mask-image: linear-gradient(to left, black, transparent);
+  mask-image: linear-gradient(
+    to left,
+    black var(--edge-blur-overhang),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to left,
+    black var(--edge-blur-overhang),
+    transparent
+  );
 }
 
 .showcase-edge-blur--right::after {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  mask-image: linear-gradient(to left, black, transparent 55%);
-  -webkit-mask-image: linear-gradient(to left, black, transparent 55%);
+  mask-image: linear-gradient(
+    to left,
+    black var(--edge-blur-overhang),
+    transparent calc(var(--edge-blur-overhang) + 0.55 * var(--edge-blur-width))
+  );
+  -webkit-mask-image: linear-gradient(
+    to left,
+    black var(--edge-blur-overhang),
+    transparent calc(var(--edge-blur-overhang) + 0.55 * var(--edge-blur-width))
+  );
 }
 
 .showcase-card {
@@ -452,5 +506,13 @@ body {
 
   .showcase-zoom-media {
     filter: none;
+  }
+
+  /* WebKit smears clamped edge pixels of a masked backdrop blur into
+     visible streaks over the carousel's clip line, so drop the blur layers
+     and keep only the gradient fade. */
+  .showcase-edge-blur::before,
+  .showcase-edge-blur::after {
+    display: none;
   }
 }

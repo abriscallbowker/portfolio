@@ -840,9 +840,11 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
+        {/* The hard clip lives here (not on .showcase-carousel) so the edge
+            blur strips can overhang the clip line; see .showcase-edge-blur. */}
         <div
           ref={containerRef}
-          className="relative flex h-full items-center overflow-visible"
+          className="relative flex h-full items-center overflow-x-clip"
         >
           <motion.div
             className="flex items-center will-change-transform"
