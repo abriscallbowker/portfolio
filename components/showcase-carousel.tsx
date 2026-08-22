@@ -411,8 +411,6 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     let cursor = x.get();
     let closestId = currentItems[0]?._id ?? null;
     let closestDist = Infinity;
-    const fullSlots = 2;
-    const fadeSlots = 0.7;
 
     cardRefs.current.forEach((el) => {
       if (!el) return;
@@ -422,31 +420,41 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const dx = itemCenter - viewCenter;
       const theta = Math.max(-MAX_THETA, Math.min(MAX_THETA, dx / rotRadius));
       const rotateY = flatten ? 0 : theta * (180 / Math.PI);
-      const scale = flatten ? 1 : 0.56 + 0.44 * Math.cos(theta);
-      const translateZ = flatten ? 0 : rotRadius * (Math.cos(theta) - 1) * 0.9;
+      // Distance travelled past the rotation cap. Beyond the cap the ring
+      // compensation freezes (cards keep moving at track speed instead of
+      // clumping) while scale and depth keep easing down toward the edge.
+      const capDist = MAX_THETA * rotRadius;
+      const dist = Math.abs(dx);
+      const overDist = Math.max(0, dist - capDist);
+      const edgeShrink = 1 / (1 + overDist / 480);
+      const scale = flatten
+        ? 1
+        : (0.45 + 0.55 * Math.cos(theta)) * edgeShrink;
+      const translateZ = flatten
+        ? 0
+        : rotRadius * (Math.cos(theta) - 1) * 0.9 - overDist * 0.3;
+      const dxCap = Math.sign(dx) * Math.min(dist, capDist);
       const translateX = flatten
         ? 0
-        : (rotRadius * Math.sin(theta) - dx) * 0.85;
-      const dist = Math.abs(dx);
-      const wrapDist =
-        setWidth > 0 ? Math.min(dist, Math.abs(dist - setWidth)) : dist;
-      const edgeDistance = dist - width / 2;
-      const wrapEdge = wrapDist - width / 2;
-      const slot = avgStride > 0 ? Math.max(0, edgeDistance) / avgStride : 0;
-      const fadeT = Math.max(0, Math.min(1, (slot - fullSlots) / fadeSlots));
-      const opacity =
-        fadeT <= 0 ? 1 : fadeT >= 1 ? 0 : 1 - fadeT * fadeT * (3 - 2 * fadeT);
-      const interactive = opacity > 0.2;
-      const offscreen = wrapEdge > viewWidth;
+        : (rotRadius * Math.sin(theta) - dxCap) * 0.85;
+      // Cull from the card's rendered position (after the ring pull-in),
+      // not its raw track position, so cards never blink out while still
+      // visible inside the clipped view.
+      const visualCenter = itemCenter + translateX;
+      const visualHalf = (width * scale) / 2 + DEPTH_PAD;
+      const offscreen =
+        visualCenter + visualHalf < 0 || visualCenter - visualHalf > viewWidth;
+      const interactive = !offscreen;
 
       el.style.transform = flatten
         ? "none"
         : `perspective(1000px) translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
       el.style.pointerEvents = interactive ? "auto" : "none";
-      const stack = String(Math.round(1000 + translateZ));
+      // Strictly distance-ordered stacking so outer cards always sit
+      // behind inner ones.
+      const stack = String(Math.max(0, Math.round(5000 - dist)));
       el.style.zIndex = stack;
       if (el.parentElement) {
-        el.parentElement.style.opacity = String(opacity);
         el.parentElement.style.visibility = offscreen ? "hidden" : "visible";
         el.parentElement.style.zIndex = stack;
         el.parentElement.style.pointerEvents = interactive ? "auto" : "none";
@@ -795,6 +803,14 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
             })}
           </motion.div>
         </div>
+        <div
+          className="showcase-edge-blur showcase-edge-blur--left"
+          aria-hidden="true"
+        />
+        <div
+          className="showcase-edge-blur showcase-edge-blur--right"
+          aria-hidden="true"
+        />
       </div>
 
       <div className="site-column w-full px-4 pt-6" aria-live="polite">

@@ -304,6 +304,76 @@ body {
 
 .showcase-carousel {
   overflow-x: clip;
+  /* Constrained view: cards hard-clip at this boundary and the edge blur
+     strips sit just inside it. */
+  max-width: min(1000px, 86vw);
+}
+
+/* Progressive blur at the clipped edges: two stacked backdrop-blur layers
+   per side, each masked with a linear gradient so the blur ramps up toward
+   the edge instead of the cards fading out. */
+.showcase-edge-blur {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  width: clamp(56px, 9vw, 128px);
+  pointer-events: none;
+}
+
+.showcase-edge-blur::before,
+.showcase-edge-blur::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+@media (max-width: 809px) {
+  .showcase-carousel {
+    max-width: none;
+  }
+
+  .showcase-edge-blur {
+    display: none;
+  }
+}
+
+.showcase-edge-blur--left {
+  left: 0;
+  background: linear-gradient(to right, var(--background), transparent);
+}
+
+.showcase-edge-blur--right {
+  right: 0;
+  background: linear-gradient(to left, var(--background), transparent);
+}
+
+.showcase-edge-blur--left::before {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  mask-image: linear-gradient(to right, black, transparent);
+  -webkit-mask-image: linear-gradient(to right, black, transparent);
+}
+
+.showcase-edge-blur--left::after {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  mask-image: linear-gradient(to right, black, transparent 55%);
+  -webkit-mask-image: linear-gradient(to right, black, transparent 55%);
+}
+
+.showcase-edge-blur--right::before {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  mask-image: linear-gradient(to left, black, transparent);
+  -webkit-mask-image: linear-gradient(to left, black, transparent);
+}
+
+.showcase-edge-blur--right::after {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  mask-image: linear-gradient(to left, black, transparent 55%);
+  -webkit-mask-image: linear-gradient(to left, black, transparent 55%);
 }
 
 .showcase-card {
