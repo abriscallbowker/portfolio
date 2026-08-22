@@ -1,6 +1,6 @@
 "use client";
 
-import {hoverSpring} from "@/lib/motion";
+import {HoverFadeOverlay} from "@/components/hover-fade-overlay";
 import {music} from "@/lib/site";
 import {motion} from "motion/react";
 import Image from "next/image";
@@ -12,9 +12,10 @@ export function MusicCard() {
         href={music.href}
         target="_blank"
         rel="noreferrer"
-        className="flex flex-col gap-1.5 rounded-2xl bg-foreground p-1.5"
-        whileHover={{opacity: 0.8}}
-        transition={hoverSpring}
+        className="relative flex flex-col gap-1.5 rounded-2xl bg-foreground p-1.5"
+        initial="rest"
+        animate="rest"
+        whileHover="hover"
       >
         <div className="flex items-center gap-4 rounded-xl bg-inset p-2">
           <Image
@@ -47,6 +48,7 @@ export function MusicCard() {
             </span>
           </span>
         </div>
+        <HoverFadeOverlay strength={0.2} className="rounded-2xl" />
       </motion.a>
       <div className="flex flex-col items-center gap-2 opacity-40">
         <Image

@@ -1,5 +1,6 @@
 "use client";
 
+import {HoverFadeOverlay} from "@/components/hover-fade-overlay";
 import {hoverSpring} from "@/lib/motion";
 import {experience, type ExperienceItem} from "@/lib/site";
 import {AnimatePresence, motion} from "motion/react";
@@ -28,11 +29,13 @@ function CompanyBadge({item}: {item: ExperienceItem}) {
         href={item.href}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-1.5 rounded-md px-[5px]"
-        whileHover={{opacity: 0.6}}
-        transition={hoverSpring}
+        className="relative inline-flex items-center gap-1.5 rounded-md px-[5px]"
+        initial="rest"
+        animate="rest"
+        whileHover="hover"
       >
         {content}
+        <HoverFadeOverlay className="rounded-md" />
       </motion.a>
     );
   }
