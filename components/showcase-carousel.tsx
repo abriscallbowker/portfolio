@@ -35,6 +35,10 @@ import { createPortal } from "react-dom";
 
 const MotionLink = motion.create(Link);
 
+// Zoom-in view is disabled on all devices/breakpoints. Flip this to true to
+// restore click/pinch-to-zoom and the fullscreen overlay.
+const ZOOM_ENABLED: boolean = false;
+
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
@@ -667,6 +671,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const onSelect = useCallback(
     (id: string) => {
       if (id === activeIdRef.current) {
+        if (!ZOOM_ENABLED) return;
         const item =
           itemsRef.current.find((entry) => entry._id === id) ?? null;
         if (item?.image?.asset || item?.video?.asset?.url) {
@@ -686,6 +691,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   }, []);
 
   const openZoomFromPinch = useCallback(() => {
+    if (!ZOOM_ENABLED) return;
     const points = [...touchPointsRef.current.values()];
     let target: ScreenshotItem | null = null;
     if (points.length >= 2) {
@@ -860,12 +866,14 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
                   data-id={item._id}
                   aria-current={activeId === item._id ? "true" : undefined}
                   aria-label={
-                    activeId === item._id
+                    ZOOM_ENABLED && activeId === item._id
                       ? `${item.title}, view larger`
                       : item.title
                   }
                   className={`relative shrink-0 bg-transparent p-0 ${
-                    activeId === item._id ? "cursor-zoom-in" : ""
+                    ZOOM_ENABLED && activeId === item._id
+                      ? "cursor-zoom-in"
+                      : ""
                   }`}
                   style={{ height: size.height, width: size.width }}
                   onClick={(event) => {
@@ -918,7 +926,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         </AnimatePresence>
       </div>
       </section>
-      {canPortal
+      {ZOOM_ENABLED && canPortal
         ? createPortal(
             <AnimatePresence>
               {zoomedItem ? (
@@ -1796,10 +1804,12 @@ function ShowcaseCaption({
           {item.description}
         </p>
       ) : null}
-      {overlay && writingHref && linkedSlugText ? (
+      {writingHref && linkedSlugText ? (
         <MotionLink
           href={writingHref}
-          className="group inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued md:self-start"
+          className={`group inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued ${
+            overlay ? "md:self-start" : ""
+          }`}
           whileHover={{ opacity: 0.6 }}
           transition={hoverSpring}
           onPointerDown={(event) => event.stopPropagation()}
