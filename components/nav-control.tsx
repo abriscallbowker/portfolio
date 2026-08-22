@@ -1,5 +1,6 @@
 "use client";
 
+import {usePreviousPathname} from "@/components/route-history";
 import {HomeIcon, TabBar} from "@/components/tab-bar";
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
@@ -18,11 +19,17 @@ const shortcutForIcon = {
 } as const;
 
 export function NavControl({
-  href,
-  label,
+  href: defaultHref,
+  label: defaultLabel,
   icon,
 }: NavControlProps) {
   const router = useRouter();
+  const previousPathname = usePreviousPathname();
+  // Send the home button back to the gallery when that's where the
+  // visitor came from, so it acts as a "return" rather than a reset.
+  const cameFromGallery = icon === "home" && previousPathname === "/gallery";
+  const href = cameFromGallery ? "/gallery" : defaultHref;
+  const label = cameFromGallery ? "Back to gallery" : defaultLabel;
   const shortcut = shortcutForIcon[icon];
   const [scrolled, setScrolled] = useState(false);
 

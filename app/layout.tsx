@@ -3,6 +3,7 @@ import {Geist_Mono, Gochi_Hand, Inter} from "next/font/google";
 import {CustomCursor} from "@/components/custom-cursor";
 import {GreetingRevealProvider} from "@/components/greeting-reveal";
 import {MotionProvider} from "@/components/motion-provider";
+import {RouteHistoryProvider} from "@/components/route-history";
 import {ViewportGlass} from "@/components/viewport-glass";
 import {SanityLive} from "@/sanity/lib/live";
 import {site} from "@/lib/site";
@@ -68,9 +69,11 @@ export default function RootLayout({children}: LayoutProps<"/">) {
       <body className="min-h-full bg-background text-ink">
         <MotionProvider>
           <GreetingRevealProvider>
-            <CustomCursor />
-            <ViewportGlass />
-            {children}
+            <RouteHistoryProvider>
+              <CustomCursor />
+              <ViewportGlass />
+              {children}
+            </RouteHistoryProvider>
           </GreetingRevealProvider>
         </MotionProvider>
         <SanityLive />
