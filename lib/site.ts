@@ -22,7 +22,7 @@ export const experience: ExperienceItem[] = [
     duration: "2024 — NOW",
     role: "Founder",
     company: "Visual Binary",
-    tooltip: "My own digital product studio",
+    tooltip: "my own product studio",
     logo: "https://framerusercontent.com/images/VJVHJAn4h1R6CjRW6a5opRCWSC0.jpg",
   },
   {

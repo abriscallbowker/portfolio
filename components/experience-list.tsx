@@ -3,12 +3,73 @@
 import {HoverFadeOverlay} from "@/components/hover-fade-overlay";
 import {hoverSpring} from "@/lib/motion";
 import {experience, type ExperienceItem} from "@/lib/site";
-import {AnimatePresence, motion} from "motion/react";
+import {motion, useReducedMotion} from "motion/react";
 import Image from "next/image";
-import {useState} from "react";
+import {useLayoutEffect, useRef, useState} from "react";
+
+function SwappingLabel({
+  primary,
+  alternate,
+  active,
+}: {
+  primary: string;
+  alternate: string;
+  active: boolean;
+}) {
+  const primaryRef = useRef<HTMLSpanElement>(null);
+  const alternateRef = useRef<HTMLSpanElement>(null);
+  const [width, setWidth] = useState<number>();
+  const animateWidth = useRef(false);
+  const reduceMotion = useReducedMotion();
+  const transition = reduceMotion ? {duration: 0} : hoverSpring;
+  const widthTransition = animateWidth.current ? transition : {duration: 0};
+
+  useLayoutEffect(() => {
+    const el = active ? alternateRef.current : primaryRef.current;
+    if (el) setWidth(el.offsetWidth);
+  }, [active, primary, alternate]);
+
+  useLayoutEffect(() => {
+    if (width !== undefined) animateWidth.current = true;
+  }, [width]);
+
+  return (
+    <motion.span
+      className="relative inline-block h-6 overflow-hidden align-bottom"
+      initial={false}
+      animate={{width: width ?? "auto"}}
+      transition={widthTransition}
+    >
+      <motion.span
+        ref={primaryRef}
+        className="absolute top-0 left-0 whitespace-nowrap text-body-md text-ink"
+        initial={false}
+        animate={{y: active ? -12 : 0, opacity: active ? 0 : 1}}
+        transition={transition}
+      >
+        {primary}
+      </motion.span>
+      <motion.span
+        ref={alternateRef}
+        className="absolute top-0 left-0 whitespace-nowrap text-body-md text-ink"
+        initial={false}
+        animate={{y: active ? 0 : 12, opacity: active ? 1 : 0}}
+        transition={transition}
+      >
+        {alternate}
+      </motion.span>
+    </motion.span>
+  );
+}
 
 function CompanyBadge({item}: {item: ExperienceItem}) {
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const hoverHandlers = item.tooltip
+    ? {
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      }
+    : {};
 
   const content = (
     <>
@@ -19,7 +80,15 @@ function CompanyBadge({item}: {item: ExperienceItem}) {
         height={20}
         className="size-5 rounded-[4px] object-cover"
       />
-      <span className="text-body-md text-ink">{item.company}</span>
+      {item.tooltip ? (
+        <SwappingLabel
+          primary={item.company}
+          alternate={item.tooltip}
+          active={hovered}
+        />
+      ) : (
+        <span className="text-body-md text-ink">{item.company}</span>
+      )}
     </>
   );
 
@@ -33,6 +102,7 @@ function CompanyBadge({item}: {item: ExperienceItem}) {
         initial="rest"
         animate="rest"
         whileHover="hover"
+        {...hoverHandlers}
       >
         {content}
         <HoverFadeOverlay className="rounded-md" />
@@ -43,24 +113,12 @@ function CompanyBadge({item}: {item: ExperienceItem}) {
   return (
     <span
       className="relative inline-flex items-center gap-1.5 rounded-md px-[5px]"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
+      aria-label={
+        item.tooltip ? `${item.company}. ${item.tooltip}` : undefined
+      }
+      {...hoverHandlers}
     >
       {content}
-      <AnimatePresence>
-        {showTooltip && item.tooltip && (
-          <motion.span
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 whitespace-nowrap rounded-md border border-gray-200 bg-white px-2 py-1 text-body-xs text-ink shadow-xs"
-            initial={{opacity: 0, y: 4, x: "-50%"}}
-            animate={{opacity: 1, y: 0, x: "-50%"}}
-            exit={{opacity: 0, y: 4, x: "-50%"}}
-            transition={hoverSpring}
-          >
-            {item.tooltip}
-          </motion.span>
-        )}
-      </AnimatePresence>
     </span>
   );
 }
