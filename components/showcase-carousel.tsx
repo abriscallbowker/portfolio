@@ -22,6 +22,7 @@ import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -316,6 +317,65 @@ function wheelDelta(event: WheelEvent) {
   return (event.deltaX + event.deltaY) * line;
 }
 
+const ShowcaseTrack = memo(function ShowcaseTrack({
+  loopItems,
+  layoutOpts,
+  gap,
+  reduceMotion,
+  trackRef,
+  cardRefs,
+  onSelect,
+}: {
+  loopItems: Array<{ item: ScreenshotItem; copy: number }>;
+  layoutOpts: LayoutOpts;
+  gap: number;
+  reduceMotion: boolean;
+  trackRef: RefObject<HTMLDivElement | null>;
+  cardRefs: RefObject<Array<HTMLDivElement | null>>;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div
+      ref={trackRef}
+      className="flex items-center will-change-transform"
+      style={{ gap: `${gap}px` }}
+    >
+      {loopItems.map(({ item, copy }, loopIndex) => {
+        const size = itemSize(item, layoutOpts);
+
+        return (
+          <button
+            key={`${item._id}-${copy}`}
+            type="button"
+            data-id={item._id}
+            aria-label={item.title}
+            className={`showcase-card-slot relative shrink-0 bg-transparent p-0 ${
+              ZOOM_ENABLED ? "data-[current=true]:cursor-zoom-in" : ""
+            }`}
+            style={{ height: size.height, width: size.width }}
+            onClick={(event) => {
+              if (event.detail !== 0) return;
+              onSelect(item._id);
+            }}
+          >
+            <div
+              ref={(el) => {
+                cardRefs.current[loopIndex] = el;
+                cardRefs.current.length = loopItems.length;
+              }}
+              data-id={item._id}
+              data-aspect={size.aspect}
+              className="showcase-card size-full"
+            >
+              <ShowcaseDevice item={item} reduceMotion={reduceMotion} />
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+});
+
 export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const reduceMotion = useReducedMotion();
   const md = useIsMd();
@@ -330,6 +390,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
 
   const sectionRef = useRef<HTMLElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIdRef = useRef(activeId);
   const reduceMotionRef = useRef(Boolean(reduceMotion));
@@ -423,18 +484,26 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     const rotRadius = Math.max(220, avgStride / SLOT_ANGLE);
     const flatten = reduceMotionRef.current;
 
-    if (setWidth > 0) {
-      x.set(wrapX(x.get(), setWidth));
+    // Wrap and paint the track in this same function so the loop offset and
+    // per-card 3D never land in different frames (a one-frame blank/jump).
+    const origin = setWidth > 0 ? wrapX(x.get(), setWidth) : x.get();
+    if (origin !== x.get()) x.set(origin);
+    if (trackRef.current) {
+      // 2D translate keeps the track from creating a shared 3D scene in
+      // Safari (translate3d would make every card share one vanishing point).
+      trackRef.current.style.transform = `translateX(${origin}px)`;
     }
 
-    let cursor = x.get();
+    let cursor = origin;
     let closestId = currentItems[0]?._id ?? null;
+    let closestParent: HTMLElement | null = null;
     let closestDist = Infinity;
 
     cardRefs.current.forEach((el) => {
       if (!el) return;
       const aspect = Number(el.dataset.aspect || PHONE_ASPECT);
-      const width = el.parentElement?.offsetWidth || opts.maxHeight * aspect;
+      const parent = el.parentElement;
+      const width = parent?.offsetWidth || opts.maxHeight * aspect;
       const itemCenter = cursor + width / 2;
       const dx = itemCenter - viewCenter;
       const theta = Math.max(-MAX_THETA, Math.min(MAX_THETA, dx / rotRadius));
@@ -456,15 +525,19 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const translateX = flatten
         ? 0
         : (rotRadius * Math.sin(theta) - dxCap) * 0.85;
-      // Cull from the card's rendered position (after the ring pull-in),
-      // not its raw track position, so cards never blink out while still
-      // visible inside the clipped view.
+      // Interactive hit-testing uses the card's rendered position (after
+      // the ring pull-in), not its raw track position. Painting stays on
+      // so a wrap that reveals another copy never flashes an unloaded
+      // visibility:hidden image.
       const visualCenter = itemCenter + translateX;
       const visualHalf = (width * scale) / 2 + DEPTH_PAD;
       const offscreen =
         visualCenter + visualHalf < 0 || visualCenter - visualHalf > viewWidth;
       const interactive = !offscreen;
 
+      // perspective() is on this transform (not CSS on the <button>) so each
+      // card has its own vanishing point. Safari flattens CSS perspective on
+      // buttons, which made the right-hand outer cards collapse.
       el.style.transform = flatten
         ? "none"
         : `perspective(1000px) translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
@@ -473,19 +546,32 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       // behind inner ones.
       const stack = String(Math.max(0, Math.round(5000 - dist)));
       el.style.zIndex = stack;
-      if (el.parentElement) {
-        el.parentElement.style.visibility = offscreen ? "hidden" : "visible";
-        el.parentElement.style.zIndex = stack;
-        el.parentElement.style.pointerEvents = interactive ? "auto" : "none";
+      if (parent) {
+        parent.style.removeProperty("visibility");
+        parent.style.zIndex = stack;
+        parent.style.pointerEvents = interactive ? "auto" : "none";
       }
 
       const id = el.dataset.id ?? null;
       if (id && dist < closestDist) {
         closestDist = dist;
         closestId = id;
+        closestParent = parent;
       }
 
       cursor += width + currentGap;
+    });
+
+    cardRefs.current.forEach((el) => {
+      const parent = el?.parentElement;
+      if (!parent) return;
+      if (parent === closestParent) {
+        parent.setAttribute("aria-current", "true");
+        parent.dataset.current = "true";
+      } else {
+        parent.removeAttribute("aria-current");
+        delete parent.dataset.current;
+      }
     });
 
     if (closestId && closestId !== activeIdRef.current) {
@@ -547,27 +633,21 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       const animation = animate(from, target, {
         ...snappySpring,
         onUpdate: (latest) => {
-          const opts = layoutOptsRef.current;
-          const { setWidth } = layoutSet(
-            itemsRef.current,
-            cardGap(opts.md),
-            opts,
-          );
-          x.set(wrapX(latest, setWidth));
+          x.set(latest);
+          applyTransforms();
         },
       });
       snapAnimationRef.current = animation;
       void animation.then(() => {
         if (snapAnimationRef.current !== animation) return;
-        const latest = layoutSet(
-          itemsRef.current,
-          cardGap(layoutOptsRef.current.md),
-          layoutOptsRef.current,
-        );
-        x.set(wrapX(x.get(), latest.setWidth));
+        // Deliberately no wrap or style writes here: this promise callback
+        // is a microtask that lands after the frame loop has rendered, so a
+        // wrapped x plus direct style writes would paint one frame with the
+        // new card transforms but the old track transform (a visible flash
+        // whenever the loop wraps on settle). applyTransforms wraps inside
+        // the frame loop instead, keeping both in the same paint.
         snappingRef.current = false;
         snapAnimationRef.current = null;
-        applyTransforms();
       });
     },
     [applyTransforms, x],
@@ -626,6 +706,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       event.preventDefault();
       interruptSnap();
       x.set(x.get() - wheelDelta(event));
+      applyTransforms();
       scheduleSnap();
     };
 
@@ -636,7 +717,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         window.clearTimeout(snapTimerRef.current);
       snapAnimationRef.current?.stop();
     };
-  }, [interruptSnap, scheduleSnap, x]);
+  }, [applyTransforms, interruptSnap, scheduleSnap, x]);
 
   const snapTo = useCallback(
     (indexInSet: number) => {
@@ -786,6 +867,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     }
     if (draggingRef.current) {
       x.set(x.get() + dx);
+      applyTransforms();
     }
   };
 
@@ -853,53 +935,15 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
           ref={containerRef}
           className="relative flex h-full items-center overflow-x-clip"
         >
-          <motion.div
-            className="flex items-center will-change-transform"
-            style={{ x, gap }}
-          >
-            {loopItems.map(({ item, copy }, loopIndex) => {
-              const size = itemSize(item, layoutOpts);
-
-              return (
-                <button
-                  key={`${item._id}-${copy}`}
-                  type="button"
-                  data-id={item._id}
-                  aria-current={activeId === item._id ? "true" : undefined}
-                  aria-label={
-                    ZOOM_ENABLED && activeId === item._id
-                      ? `${item.title}, view larger`
-                      : item.title
-                  }
-                  className={`relative shrink-0 bg-transparent p-0 ${
-                    ZOOM_ENABLED && activeId === item._id
-                      ? "cursor-zoom-in"
-                      : ""
-                  }`}
-                  style={{ height: size.height, width: size.width }}
-                  onClick={(event) => {
-                    if (event.detail !== 0) return;
-                    onSelect(item._id);
-                  }}
-                >
-                  <div
-                    ref={(el) => {
-                      cardRefs.current[loopIndex] = el;
-                      cardRefs.current.length = loopItems.length;
-                    }}
-                    data-id={item._id}
-                    data-aspect={size.aspect}
-                    className="showcase-card size-full"
-                  >
-                    <ShowcaseDevice
-                      item={item}
-                      reduceMotion={Boolean(reduceMotion)}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-          </motion.div>
+          <ShowcaseTrack
+            loopItems={loopItems}
+            layoutOpts={layoutOpts}
+            gap={gap}
+            reduceMotion={Boolean(reduceMotion)}
+            trackRef={trackRef}
+            cardRefs={cardRefs}
+            onSelect={onSelect}
+          />
         </div>
         <div
           className="showcase-edge-blur showcase-edge-blur--left"
@@ -2004,6 +2048,7 @@ function ShowcaseMedia({ item }: { item: ScreenshotItem }) {
       width={width}
       height={height}
       draggable={false}
+      decoding="sync"
       placeholder={blur ? "blur" : "empty"}
       blurDataURL={blur ? image.asset.metadata?.lqip : undefined}
       sizes={SCREENSHOT_IMAGE_SIZES}
