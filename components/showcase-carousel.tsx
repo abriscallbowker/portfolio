@@ -15,6 +15,7 @@ import {
   useAnimationFrame,
   useMotionValue,
   useReducedMotion,
+  useTransform,
 } from "motion/react";
 import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import Image, { getImageProps } from "next/image";
@@ -38,6 +39,10 @@ const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
 const ZOOM_NAV_THRESHOLD = 64;
+const PINCH_OPEN_SCALE = 1.2;
+const PINCH_CLOSE_SCALE = 0.8;
+const SWIPE_CLOSE_DISTANCE = 90;
+const SWIPE_SCALE_RANGE = 400;
 const ZOOM_COPIES = 3;
 // Kept in sync with md:min-w-[250px] and the 2.5rem overlay caption max-width.
 const ZOOM_CAPTION_MIN_WIDTH = 250;
@@ -136,6 +141,12 @@ function wrapX(value: number, setWidth: number) {
   if (setWidth <= 0) return 0;
   const wrapped = value % setWidth;
   return wrapped > 0 ? wrapped - setWidth : wrapped;
+}
+
+function pinchDistance(points: Map<number, { x: number; y: number }>) {
+  const [a, b] = [...points.values()];
+  if (!a || !b) return 0;
+  return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
 const emptySubscribe = () => () => {};
@@ -323,6 +334,9 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const snapAnimationRef = useRef<ReturnType<typeof animate> | null>(null);
   const dragMovedRef = useRef(0);
   const pointerRef = useRef<{ id: number; lastX: number } | null>(null);
+  const touchPointsRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchStartRef = useRef<number | null>(null);
+  const pinchHandledRef = useRef(false);
   const copiesRef = useRef(3);
   const itemsRef = useRef(items);
   const initializedRef = useRef(false);
@@ -671,6 +685,33 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     setZoomedItem(null);
   }, []);
 
+  const openZoomFromPinch = useCallback(() => {
+    const points = [...touchPointsRef.current.values()];
+    let target: ScreenshotItem | null = null;
+    if (points.length >= 2) {
+      const midX = (points[0].x + points[1].x) / 2;
+      const midY = (points[0].y + points[1].y) / 2;
+      const id = document
+        .elementFromPoint(midX, midY)
+        ?.closest("[data-id]")
+        ?.getAttribute("data-id");
+      if (id) {
+        target = itemsRef.current.find((item) => item._id === id) ?? null;
+      }
+    }
+    if (!target) {
+      target =
+        itemsRef.current.find((item) => item._id === activeIdRef.current) ??
+        null;
+    }
+    if (!target) return;
+    const found = target;
+    if (!found.image?.asset && !found.video?.asset?.url) return;
+    const index = itemsRef.current.findIndex((item) => item._id === found._id);
+    if (index >= 0 && found._id !== activeIdRef.current) snapTo(index);
+    setZoomedItem(found);
+  }, [snapTo]);
+
   const onZoomActiveChange = useCallback(
     (item: ScreenshotItem) => {
       setZoomedItem((current) => (current?._id === item._id ? current : item));
@@ -682,6 +723,22 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (zoomedRef.current || event.button !== 0) return;
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (touchPointsRef.current.size === 2) {
+        // Second finger down starts a pinch; abandon any drag in flight.
+        interruptSnap();
+        pointerRef.current = null;
+        draggingRef.current = false;
+        pinchStartRef.current = pinchDistance(touchPointsRef.current);
+        pinchHandledRef.current = false;
+        return;
+      }
+      if (touchPointsRef.current.size > 2) return;
+    }
     interruptSnap();
     draggingRef.current = false;
     dragMovedRef.current = 0;
@@ -689,6 +746,28 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (
+      event.pointerType === "touch" &&
+      touchPointsRef.current.has(event.pointerId)
+    ) {
+      touchPointsRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (pinchStartRef.current !== null) {
+        if (
+          !pinchHandledRef.current &&
+          pinchStartRef.current > 0 &&
+          touchPointsRef.current.size >= 2 &&
+          pinchDistance(touchPointsRef.current) / pinchStartRef.current >
+            PINCH_OPEN_SCALE
+        ) {
+          pinchHandledRef.current = true;
+          openZoomFromPinch();
+        }
+        return;
+      }
+    }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
     const dx = event.clientX - pointer.lastX;
@@ -704,6 +783,14 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.delete(event.pointerId);
+      if (touchPointsRef.current.size < 2) pinchStartRef.current = null;
+      if (pinchHandledRef.current) {
+        if (touchPointsRef.current.size === 0) pinchHandledRef.current = false;
+        return;
+      }
+    }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
     const dragged = draggingRef.current;
@@ -877,9 +964,16 @@ function ShowcaseZoomOverlay({
   const gestureMinXRef = useRef(0);
   const gestureMaxXRef = useRef(0);
   const dragMovedRef = useRef(0);
-  const pointerRef = useRef<{ id: number; lastX: number; lastY: number } | null>(
-    null,
-  );
+  const pointerRef = useRef<{
+    id: number;
+    lastX: number;
+    lastY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const touchPointsRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchStartRef = useRef<number | null>(null);
+  const dragAxisRef = useRef<"x" | "y" | null>(null);
   const snapTimerRef = useRef<number | null>(null);
   const snapAnimationRef = useRef<ReturnType<typeof animate> | null>(null);
   const itemsRef = useRef(items);
@@ -904,6 +998,19 @@ function ShowcaseZoomOverlay({
   });
 
   const x = useMotionValue(0);
+  // Vertical swipe-to-dismiss offset and live pinch scale (touch only); the
+  // combined scale shrinks the stage as either gesture progresses.
+  const dragY = useMotionValue(0);
+  const pinchScale = useMotionValue(1);
+  const gestureScale = useTransform<number, number>(
+    [dragY, pinchScale],
+    ([offsetY, scale]) =>
+      (1 -
+        (Math.min(Math.max(offsetY, 0), SWIPE_SCALE_RANGE) /
+          SWIPE_SCALE_RANGE) *
+          0.2) *
+      scale,
+  );
   const gap = zoomGap(md);
   const bounds = zoomMediaBounds(md, view.width, view.height);
   const layout = useMemo(
@@ -947,6 +1054,15 @@ function ShowcaseZoomOverlay({
     leavingRef.current = true;
     setLeaving(true);
   }, [onClose, reduceMotion]);
+
+  const closeFromSwipe = useCallback(() => {
+    if (!reduceMotionRef.current) {
+      // Keep travelling in the swipe direction while the scale-out plays so
+      // the dismissal reads as a continuation of the gesture.
+      animate(dragY, dragY.get() + 240, { duration: 0.25, ease: "easeOut" });
+    }
+    requestClose();
+  }, [dragY, requestClose]);
 
   const applyTransforms = useCallback(() => {
     const container = containerRef.current;
@@ -1381,17 +1497,53 @@ function ShowcaseZoomOverlay({
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (leavingRef.current || event.button !== 0) return;
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (touchPointsRef.current.size === 2) {
+        // Second finger down starts a pinch; abandon any drag in flight.
+        interruptSnap();
+        pointerRef.current = null;
+        draggingRef.current = false;
+        dragAxisRef.current = null;
+        pinchStartRef.current = pinchDistance(touchPointsRef.current);
+        return;
+      }
+      if (touchPointsRef.current.size > 2) return;
+    }
     interruptSnap();
     draggingRef.current = false;
     dragMovedRef.current = 0;
+    dragAxisRef.current = null;
     pointerRef.current = {
       id: event.pointerId,
       lastX: event.clientX,
       lastY: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
     };
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (
+      event.pointerType === "touch" &&
+      touchPointsRef.current.has(event.pointerId)
+    ) {
+      touchPointsRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (pinchStartRef.current !== null) {
+        if (pinchStartRef.current > 0 && touchPointsRef.current.size >= 2) {
+          const ratio =
+            pinchDistance(touchPointsRef.current) / pinchStartRef.current;
+          pinchScale.set(Math.min(1.05, Math.max(0.5, ratio)));
+        }
+        return;
+      }
+    }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
     const dx = event.clientX - pointer.lastX;
@@ -1402,21 +1554,64 @@ function ShowcaseZoomOverlay({
     if (!draggingRef.current && dragMovedRef.current > DRAG_CLICK_THRESHOLD) {
       draggingRef.current = true;
       event.currentTarget.setPointerCapture(event.pointerId);
-      beginGesture();
+      // Lock the drag axis at gesture start: a predominantly downward touch
+      // drag dismisses the overlay, anything else navigates the track.
+      const totalDx = event.clientX - pointer.startX;
+      const totalDy = event.clientY - pointer.startY;
+      dragAxisRef.current =
+        event.pointerType === "touch" &&
+        totalDy > 0 &&
+        Math.abs(totalDy) > Math.abs(totalDx)
+          ? "y"
+          : "x";
+      if (dragAxisRef.current === "x") beginGesture();
     }
-    if (draggingRef.current && itemsRef.current.length > 1) {
+    if (!draggingRef.current) return;
+    if (dragAxisRef.current === "y") {
+      dragY.set(Math.max(0, dragY.get() + dy));
+    } else if (itemsRef.current.length > 1) {
       x.set(clampLiveX(x.get() + dx));
     }
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") {
+      touchPointsRef.current.delete(event.pointerId);
+      if (pinchStartRef.current !== null) {
+        if (touchPointsRef.current.size < 2) {
+          pinchStartRef.current = null;
+          if (
+            event.type !== "pointercancel" &&
+            pinchScale.get() < PINCH_CLOSE_SCALE
+          ) {
+            requestClose();
+          } else {
+            animate(pinchScale, 1, snappySpring);
+          }
+        }
+        return;
+      }
+    }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
     const dragged = draggingRef.current;
+    const axis = dragAxisRef.current;
     pointerRef.current = null;
     draggingRef.current = false;
+    dragAxisRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (dragged && axis === "y") {
+      if (
+        event.type !== "pointercancel" &&
+        dragY.get() > SWIPE_CLOSE_DISTANCE
+      ) {
+        closeFromSwipe();
+      } else {
+        animate(dragY, 0, snappySpring);
+      }
+      return;
     }
     if (event.type === "pointercancel") {
       if (dragged) scheduleSnap();
@@ -1472,9 +1667,10 @@ function ShowcaseZoomOverlay({
           if (leavingRef.current) onClose();
         }}
       >
-        <div
+        <motion.div
           ref={containerRef}
           className="relative flex h-full w-full items-center"
+          style={{ y: dragY, scale: gestureScale }}
         >
           <motion.div
             className="flex items-center will-change-transform"
@@ -1547,7 +1743,7 @@ function ShowcaseZoomOverlay({
               );
             })}
           </motion.div>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
