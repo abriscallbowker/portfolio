@@ -93,45 +93,31 @@ const components: PortableTextComponents = {
       const dimensions = value.asset.metadata?.dimensions;
       const width = dimensions?.width ?? 1600;
       const height = dimensions?.height ?? 1000;
-      const caption = value.alt?.trim();
+      const alt = value.alt?.trim() ?? "";
 
       return (
-        <figure className="flex flex-col gap-3">
-          <div className="overflow-hidden">
-            <Image
-              src={urlFor(value).width(1600).url()}
-              alt={caption || ""}
-              width={width}
-              height={height}
-              className="h-auto w-full"
-              placeholder={value.asset.metadata?.lqip ? "blur" : "empty"}
-              blurDataURL={value.asset.metadata?.lqip}
-              sizes="(min-width: 640px) 640px, 100vw"
-            />
-          </div>
-          {caption ? (
-            <figcaption className="text-center text-body-xs italic text-subdued">
-              {caption}
-            </figcaption>
-          ) : null}
-        </figure>
+        <div className="overflow-hidden">
+          <Image
+            src={urlFor(value).width(1600).url()}
+            alt={alt}
+            width={width}
+            height={height}
+            className="h-auto w-full"
+            placeholder={value.asset.metadata?.lqip ? "blur" : "empty"}
+            blurDataURL={value.asset.metadata?.lqip}
+            sizes="(min-width: 640px) 640px, 100vw"
+          />
+        </div>
       );
     },
     video: ({value}: {value: PortableVideoValue}) => {
       if (!value?.asset?.url) return null;
-      const caption = value.alt?.trim();
+      const alt = value.alt?.trim();
 
       return (
-        <figure className="flex flex-col gap-3">
-          <div className="overflow-hidden">
-            <PortableVideo src={value.asset.url} alt={caption || undefined} />
-          </div>
-          {caption ? (
-            <figcaption className="text-center text-body-xs italic text-subdued">
-              {caption}
-            </figcaption>
-          ) : null}
-        </figure>
+        <div className="overflow-hidden">
+          <PortableVideo src={value.asset.url} alt={alt || undefined} />
+        </div>
       );
     },
   },
