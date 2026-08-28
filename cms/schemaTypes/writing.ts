@@ -66,6 +66,11 @@ export const writing = defineType({
               title: 'Alternative text',
               type: 'string',
             }),
+            defineField({
+              name: 'caption',
+              title: 'Caption',
+              type: 'string',
+            }),
           ],
         }),
         defineArrayMember({
@@ -78,6 +83,11 @@ export const writing = defineType({
             defineField({
               name: 'alt',
               title: 'Alternative text',
+              type: 'string',
+            }),
+            defineField({
+              name: 'caption',
+              title: 'Caption',
               type: 'string',
             }),
           ],

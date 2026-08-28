@@ -41,10 +41,12 @@ export const WRITING_BY_SLUG_QUERY = defineQuery(`
       ...,
       _type == "image" => {
         ...,
-        ${imageFields}
+        ${imageFields},
+        caption
       },
       _type == "video" => {
         ...,
+        caption,
         asset->{
           _id,
           url,

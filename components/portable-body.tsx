@@ -7,6 +7,7 @@ import {urlFor} from "@/sanity/lib/image";
 type PortableImage = {
   _type: "image";
   alt?: string;
+  caption?: string;
   asset?: {
     _id?: string;
     metadata?: {
@@ -19,10 +20,22 @@ type PortableImage = {
 type PortableVideoValue = {
   _type: "video";
   alt?: string;
+  caption?: string;
   asset?: {
     url?: string;
   };
 };
+
+function MediaCaption({caption}: {caption?: string}) {
+  const text = caption?.trim();
+  if (!text) return null;
+
+  return (
+    <figcaption className="text-center text-body-sm italic text-subdued">
+      {text}
+    </figcaption>
+  );
+}
 
 function isEmptyBlock(block: unknown) {
   if (!block || typeof block !== "object") return false;
@@ -96,18 +109,21 @@ const components: PortableTextComponents = {
       const alt = value.alt?.trim() ?? "";
 
       return (
-        <div className="overflow-hidden">
-          <Image
-            src={urlFor(value).width(1600).url()}
-            alt={alt}
-            width={width}
-            height={height}
-            className="h-auto w-full"
-            placeholder={value.asset.metadata?.lqip ? "blur" : "empty"}
-            blurDataURL={value.asset.metadata?.lqip}
-            sizes="(min-width: 640px) 640px, 100vw"
-          />
-        </div>
+        <figure className="flex flex-col gap-2">
+          <div className="overflow-hidden">
+            <Image
+              src={urlFor(value).width(1600).url()}
+              alt={alt}
+              width={width}
+              height={height}
+              className="h-auto w-full"
+              placeholder={value.asset.metadata?.lqip ? "blur" : "empty"}
+              blurDataURL={value.asset.metadata?.lqip}
+              sizes="(min-width: 640px) 640px, 100vw"
+            />
+          </div>
+          <MediaCaption caption={value.caption} />
+        </figure>
       );
     },
     video: ({value}: {value: PortableVideoValue}) => {
@@ -115,9 +131,12 @@ const components: PortableTextComponents = {
       const alt = value.alt?.trim();
 
       return (
-        <div className="overflow-hidden">
-          <PortableVideo src={value.asset.url} alt={alt || undefined} />
-        </div>
+        <figure className="flex flex-col gap-2">
+          <div className="overflow-hidden">
+            <PortableVideo src={value.asset.url} alt={alt || undefined} />
+          </div>
+          <MediaCaption caption={value.caption} />
+        </figure>
       );
     },
   },
