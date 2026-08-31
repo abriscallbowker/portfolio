@@ -13,7 +13,10 @@ function scrolledToBottom(slack = 2) {
 
 export function SiteFooter() {
   const pathname = usePathname();
-  const staticFooter = pathname === "/" || pathname === "/about";
+  const staticFooter =
+    pathname === "/" ||
+    pathname === "/about" ||
+    pathname.startsWith("/writing/");
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {

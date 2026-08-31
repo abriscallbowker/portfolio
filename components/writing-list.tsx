@@ -16,51 +16,40 @@ const textVariants = {
   hover: {opacity: 0.6},
 };
 
-const coverVariants = {
-  rest: {scale: 0},
-  hover: {scale: 1},
-};
-
 const itemEnter = {scale: 0.5, opacity: 0};
 const itemShown = {scale: 1, opacity: 1};
 
 function WritingListItem({post}: {post: WritingListItem}) {
   const coverUrl = post.coverImage?.asset
-    ? urlFor(post.coverImage).width(128).height(132).fit("crop").url()
+    ? urlFor(post.coverImage).width(128).height(128).fit("crop").url()
     : null;
 
   return (
     <MotionLink
       href={`/writing/${post.slug}`}
-      className="relative flex items-center px-4 py-2"
+      className="flex items-center gap-4 px-4 py-2"
       initial="rest"
       animate="rest"
       whileHover="hover"
       transition={hoverSpring}
     >
-      <motion.div className="flex flex-col gap-2" variants={textVariants}>
-        <span className="text-body-md font-medium text-ink">{post.title}</span>
+      {coverUrl ? (
+        <Image
+          src={coverUrl}
+          alt=""
+          width={64}
+          height={64}
+          className="-my-1.5 size-16 shrink-0 object-cover"
+        />
+      ) : null}
+      <motion.div className="flex min-w-0 flex-col gap-2" variants={textVariants}>
+        <span className="truncate text-body-md font-medium text-ink">
+          {post.title}
+        </span>
         <span className="text-body-sm text-subdued">
           {formatListDate(post.publishedAt)}
         </span>
       </motion.div>
-      {coverUrl ? (
-        <div className="pointer-events-none absolute top-1/2 right-4 hidden size-16 -translate-y-1/2 overflow-hidden md:block">
-          <motion.div
-            aria-hidden
-            className="size-full origin-center"
-            variants={coverVariants}
-          >
-            <Image
-              src={coverUrl}
-              alt=""
-              width={64}
-              height={66}
-              className="h-[66px] w-16 max-w-none object-cover"
-            />
-          </motion.div>
-        </div>
-      ) : null}
     </MotionLink>
   );
 }
