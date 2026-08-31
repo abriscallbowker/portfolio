@@ -1,3 +1,7 @@
+import type {WritingCategory} from "@/lib/writing";
+
+export type {WritingCategory};
+
 export type SanityImageValue = {
   _type?: "image";
   alt?: string;
@@ -18,6 +22,7 @@ export type WritingListItem = {
   title: string;
   slug: string;
   publishedAt: string;
+  category?: WritingCategory | null;
   coverImage?: SanityImageValue | null;
 };
 

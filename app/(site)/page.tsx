@@ -18,7 +18,10 @@ export default async function Home() {
 
   return (
     <div className="site-column w-full">
-      <WritingList posts={(data as WritingListItem[] | null) ?? []} />
+      <WritingList
+        posts={(data as WritingListItem[] | null) ?? []}
+        filterable
+      />
     </div>
   );
 }

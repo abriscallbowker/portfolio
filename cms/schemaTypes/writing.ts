@@ -14,6 +14,21 @@ export const writing = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'category',
+      title: 'Category',
+      type: 'string',
+      options: {
+        list: [
+          {title: 'Personal', value: 'personal'},
+          {title: 'Work', value: 'work'},
+          {title: 'Projects', value: 'projects'},
+        ],
+        layout: 'radio',
+        direction: 'horizontal',
+      },
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
@@ -98,8 +113,24 @@ export const writing = defineType({
   preview: {
     select: {
       title: 'title',
-      subtitle: 'publishedAt',
+      publishedAt: 'publishedAt',
+      category: 'category',
       media: 'coverImage',
+    },
+    prepare({title, publishedAt, category, media}) {
+      const categoryLabel =
+        category === 'personal'
+          ? 'Personal'
+          : category === 'work'
+            ? 'Work'
+            : category === 'projects'
+              ? 'Projects'
+              : undefined
+      return {
+        title,
+        subtitle: [categoryLabel, publishedAt].filter(Boolean).join(' · '),
+        media,
+      }
     },
   },
   orderings: [

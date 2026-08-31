@@ -18,6 +18,7 @@ export const WRITING_LIST_QUERY = defineQuery(`
   *[_type == "writing" && defined(slug.current)] | order(publishedAt desc) {
     _id,
     title,
+    category,
     "slug": slug.current,
     publishedAt,
     coverImage { ${imageFields} }
