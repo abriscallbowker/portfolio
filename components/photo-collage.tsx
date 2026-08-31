@@ -11,12 +11,14 @@ const cardClassName =
 function PhotoCard({
   src,
   alt,
+  label,
   sizes,
   className,
   rotate = 0,
 }: {
   src: string;
   alt: string;
+  label: string;
   sizes: string;
   className: string;
   rotate?: number;
@@ -24,7 +26,7 @@ function PhotoCard({
   return (
     <motion.div
       data-cursor="interactive"
-      className={`${cardClassName} ${className}`}
+      className={`group ${cardClassName} ${className}`}
       initial={false}
       animate={{rotate, scale: 1}}
       whileHover={{
@@ -36,6 +38,9 @@ function PhotoCard({
     >
       <div className="relative size-full overflow-hidden rounded-[5px]">
         <Image src={src} alt={alt} fill className="object-cover" sizes={sizes} />
+        <span className="pointer-events-none absolute bottom-0 left-0 z-[1] rounded-tr-[4px] bg-white px-1.5 py-0.5 text-xs font-medium text-black transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
+          {label}
+        </span>
       </div>
     </motion.div>
   );
@@ -50,6 +55,7 @@ export function PhotoCollage() {
             key={photo.src}
             src={photo.src}
             alt={photo.alt}
+            label={photo.label}
             sizes="(min-width: 768px) 184px, 50vw"
             rotate={photo.rotate}
             className={`absolute h-[248px] w-[184px] ${photo.className}`}
@@ -62,6 +68,7 @@ export function PhotoCollage() {
             key={`${photo.src}-mobile`}
             src={photo.src}
             alt={photo.alt}
+            label={photo.label}
             sizes="(min-width: 768px) 184px, 50vw"
             className="relative aspect-[3/4] w-full min-w-0"
           />

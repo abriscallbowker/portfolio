@@ -45,24 +45,28 @@ export const personalPhotos = [
   {
     src: "/about/xlr.webp",
     alt: "XLR",
+    label: "DJing @ XLR",
     className: "left-[-40px] top-0 z-[1]",
     rotate: -8,
   },
   {
     src: "/about/kilimanjaro.webp",
     alt: "Kilimanjaro",
+    label: "Kilimanjaro Summit",
     className: "left-[125px] top-[-8px] z-[2]",
     rotate: 5,
   },
   {
     src: "/about/manchester-half.webp",
     alt: "Manchester Half Marathon",
+    label: "Manchester 21km",
     className: "left-[291px] top-[-40px] z-[3]",
     rotate: -6,
   },
   {
     src: "/about/mont-blanc.webp",
     alt: "Mont Blanc",
+    label: "Mont Blanc",
     className: "left-[456px] top-[-4px] z-[4]",
     rotate: 4,
   },
