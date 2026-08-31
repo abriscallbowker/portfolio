@@ -71,7 +71,7 @@ export const personalPhotos = [
 export const music = {
   title: "Easy 2 Luv U",
   artist: "Noise Complaint",
-  date: "12 February 2025",
+  date: "Feb 12, 2025",
   href: "https://soundcloud.com/noisecomplaintdj/easy2luvu",
   cover:
     "https://framerusercontent.com/images/wJKpgXMwrFjIKU9164o086U9lI.webp",

@@ -15,7 +15,7 @@ export function SiteFooter() {
   const pathname = usePathname();
   const staticFooter =
     pathname === "/" ||
-    pathname === "/about" ||
+    pathname === "/archive" ||
     pathname.startsWith("/writing/");
   const [revealed, setRevealed] = useState(false);
 

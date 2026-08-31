@@ -1,27 +1,21 @@
-import {WritingList} from "@/components/writing-list";
-import {preloadAboutImages} from "@/lib/preload-about-images";
+import {ExperienceList} from "@/components/experience-list";
+import {MusicCard} from "@/components/music-card";
+import {PhotoCollage} from "@/components/photo-collage";
+import {SocialLinks} from "@/components/social-links";
 import {preloadGalleryImages} from "@/lib/preload-gallery-images";
-import {sanityFetch} from "@/sanity/lib/live";
-import {WRITING_LIST_QUERY} from "@/sanity/lib/queries";
-import type {WritingListItem} from "@/sanity/lib/types";
 
 export default async function Home() {
-  preloadAboutImages();
-
-  const [{data}] = await Promise.all([
-    sanityFetch({
-      query: WRITING_LIST_QUERY,
-      stega: false,
-    }),
-    preloadGalleryImages(),
-  ]);
-
+  await preloadGalleryImages();
   return (
-    <div className="site-column w-full">
-      <WritingList
-        posts={(data as WritingListItem[] | null) ?? []}
-        filterable
-      />
+    <div className="site-column flex w-full flex-col gap-10">
+      <div className="flex flex-col gap-12 md:gap-20">
+        <ExperienceList />
+        <section className="flex flex-col gap-4 px-4">
+          <PhotoCollage />
+          <MusicCard />
+        </section>
+      </div>
+      <SocialLinks />
     </div>
   );
 }

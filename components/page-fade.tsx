@@ -30,7 +30,7 @@ const gallerySlideVariants = {
 };
 
 function tabIndex(segment: string | null) {
-  if (segment === "about") return 1;
+  if (segment === "archive") return 1;
   if (segment === "gallery") return 2;
   return 0;
 }
@@ -95,7 +95,7 @@ export function PageFade({children}: {children: ReactNode}) {
       <div className="grid w-full grid-cols-1 grid-rows-1 overflow-x-clip">
         <AnimatePresence custom={direction} mode="sync" initial={false}>
           <motion.div
-            key={segment ?? "archive"}
+            key={segment ?? "about"}
             className="col-start-1 row-start-1 w-full"
             custom={direction}
             variants={segment === "gallery" ? gallerySlideVariants : tabSlideVariants}

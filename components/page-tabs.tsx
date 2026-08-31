@@ -7,8 +7,8 @@ import {usePathname} from "next/navigation";
 import {useCallback, useLayoutEffect, useRef, useState} from "react";
 
 const tabs = [
-  {href: "/", label: "Archive"},
-  {href: "/about", label: "About"},
+  {href: "/", label: "About"},
+  {href: "/archive", label: "Archive"},
   {href: "/gallery", label: "Gallery"},
 ] as const;
 

@@ -10,7 +10,17 @@ import {site} from "@/lib/site";
 import {AnimatePresence, motion, useReducedMotion} from "motion/react";
 import Image from "next/image";
 import {usePathname} from "next/navigation";
-import {useState} from "react";
+import {useRef, useState} from "react";
+
+const tabOrder = ["/", "/archive", "/gallery"];
+
+// Matches PageFade's slide so the filter moves with the page content:
+// entering from a lower-index tab slides in from the right, and vice versa.
+const filterSlideVariants = {
+  enter: (direction: number) => ({height: 0, opacity: 0, x: 32 * direction}),
+  center: {height: "auto", opacity: 1, x: 0},
+  exit: (direction: number) => ({height: 0, opacity: 0, x: -32 * direction}),
+};
 
 export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
   const {played, ready} = useGreetingReveal();
@@ -18,7 +28,17 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
   const reduceMotion = useReducedMotion();
   const instant = skipIntro || Boolean(reduceMotion);
   const pathname = usePathname();
-  const isHome = pathname === "/";
+  const isArchive = pathname === "/archive";
+
+  const tabIndex = tabOrder.indexOf(pathname);
+  const previousIndex = useRef(tabIndex);
+  const directionRef = useRef(1);
+  if (tabIndex !== -1 && previousIndex.current !== tabIndex) {
+    directionRef.current =
+      previousIndex.current === -1 || tabIndex > previousIndex.current ? 1 : -1;
+    previousIndex.current = tabIndex;
+  }
+  const direction = directionRef.current;
 
   return (
     <section className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4">
@@ -45,15 +65,15 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
         <AppearFade delay={0} visible={ready} instant={skipIntro}>
           <div className="flex flex-col">
             <PageTabs />
-            <AnimatePresence initial={false}>
-              {isHome ? (
+            <AnimatePresence initial={false} custom={direction}>
+              {isArchive ? (
                 <motion.div
                   key="category-filter"
-                  // Home is the first tab, so its content always enters
-                  // from and exits to the left, matching PageFade's slide.
-                  initial={{height: 0, opacity: 0, x: -32}}
-                  animate={{height: "auto", opacity: 1, x: 0}}
-                  exit={{height: 0, opacity: 0, x: -32}}
+                  custom={direction}
+                  variants={filterSlideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
                   transition={reduceMotion ? {duration: 0} : tabSlide}
                 >
                   <div className="pt-4">
