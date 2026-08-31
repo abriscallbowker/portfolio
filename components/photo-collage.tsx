@@ -11,36 +11,37 @@ const cardClassName =
 function PhotoCard({
   src,
   alt,
-  label,
   sizes,
   className,
   rotate = 0,
+  hoverEffect = true,
 }: {
   src: string;
   alt: string;
-  label: string;
   sizes: string;
   className: string;
   rotate?: number;
+  hoverEffect?: boolean;
 }) {
   return (
     <motion.div
       data-cursor="interactive"
-      className={`group ${cardClassName} ${className}`}
+      className={`${cardClassName} ${className}`}
       initial={false}
       animate={{rotate, scale: 1}}
-      whileHover={{
-        scale: 1.1,
-        rotate: 0,
-        transition: hoverSpring,
-      }}
+      whileHover={
+        hoverEffect
+          ? {
+              scale: 1.1,
+              rotate: 0,
+              transition: hoverSpring,
+            }
+          : undefined
+      }
       transition={hoverSpring}
     >
       <div className="relative size-full overflow-hidden rounded-[5px]">
         <Image src={src} alt={alt} fill className="object-cover" sizes={sizes} />
-        <span className="pointer-events-none absolute bottom-0 left-0 z-[1] rounded-tr-[4px] bg-white px-1.5 py-0.5 text-xs font-medium text-black transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
-          {label}
-        </span>
       </div>
     </motion.div>
   );
@@ -55,7 +56,6 @@ export function PhotoCollage() {
             key={photo.src}
             src={photo.src}
             alt={photo.alt}
-            label={photo.label}
             sizes="(min-width: 768px) 184px, 50vw"
             rotate={photo.rotate}
             className={`absolute h-[248px] w-[184px] ${photo.className}`}
@@ -68,9 +68,9 @@ export function PhotoCollage() {
             key={`${photo.src}-mobile`}
             src={photo.src}
             alt={photo.alt}
-            label={photo.label}
             sizes="(min-width: 768px) 184px, 50vw"
             className="relative aspect-[3/4] w-full min-w-0"
+            hoverEffect={false}
           />
         ))}
       </div>
