@@ -44,6 +44,23 @@ const ZOOM_ENABLED: boolean = false;
 const MD_QUERY = "(min-width: 810px)";
 const DRAG_CLICK_THRESHOLD = 8;
 const SNAP_IDLE_MS = 90;
+// Flick momentum: releasing a drag above this speed (px/s) projects the
+// track forward before snapping, so one swipe can travel several cards.
+const FLICK_MIN_VELOCITY = 300;
+// Seconds of release velocity carried into the projected landing point.
+const MOMENTUM_PROJECTION = 0.4;
+// Only velocity samples this recent count toward the release velocity, so
+// a drag that pauses before lifting doesn't inherit stale flick speed.
+const VELOCITY_WINDOW_MS = 100;
+// Long momentum glides use a softer spring than short snaps so the
+// deceleration reads as a scroll settling rather than an elastic yank.
+const GLIDE_DISTANCE_THRESHOLD = 320;
+const glideSpring = {
+  type: "spring",
+  stiffness: 130,
+  damping: 26,
+  mass: 1,
+} as const;
 const ZOOM_NAV_THRESHOLD = 64;
 const PINCH_OPEN_SCALE = 1.2;
 const PINCH_CLOSE_SCALE = 0.8;
@@ -400,6 +417,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   const snapAnimationRef = useRef<ReturnType<typeof animate> | null>(null);
   const dragMovedRef = useRef(0);
   const pointerRef = useRef<{ id: number; lastX: number } | null>(null);
+  const velocitySamplesRef = useRef<Array<{ t: number; x: number }>>([]);
   const touchPointsRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchStartRef = useRef<number | null>(null);
   const pinchHandledRef = useRef(false);
@@ -624,14 +642,19 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
   });
 
   const animateSnap = useCallback(
-    (target: number) => {
+    (target: number, velocity = 0) => {
       const from = x.get();
       if (!Number.isFinite(target) || Math.abs(target - from) < 1) return;
 
       snapAnimationRef.current?.stop();
       snappingRef.current = true;
+      const spring =
+        Math.abs(target - from) > GLIDE_DISTANCE_THRESHOLD
+          ? glideSpring
+          : snappySpring;
       const animation = animate(from, target, {
-        ...snappySpring,
+        ...spring,
+        velocity,
         onUpdate: (latest) => {
           x.set(latest);
           applyTransforms();
@@ -653,33 +676,45 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     [applyTransforms, x],
   );
 
-  const snapToClosest = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || itemsRef.current.length === 0) return;
+  const snapToClosest = useCallback(
+    (velocity = 0) => {
+      const container = containerRef.current;
+      if (!container || itemsRef.current.length === 0) return;
 
-    const viewCenter = container.clientWidth / 2;
-    const opts = layoutOptsRef.current;
-    const currentGap = cardGap(opts.md);
-    const origin = x.get();
-    let cursor = origin;
-    let bestTarget = origin;
-    let bestDist = Infinity;
+      const viewCenter = container.clientWidth / 2;
+      const opts = layoutOptsRef.current;
+      const currentGap = cardGap(opts.md);
+      // Project the release velocity forward so a flick lands several cards
+      // away instead of snapping back to whatever is currently centered.
+      // Carry is capped at one full loop of the set.
+      const { setWidth } = layoutSet(itemsRef.current, currentGap, opts);
+      const rawCarry = velocity * MOMENTUM_PROJECTION;
+      const carry =
+        setWidth > 0
+          ? Math.max(-setWidth, Math.min(setWidth, rawCarry))
+          : rawCarry;
+      const origin = x.get() + carry;
+      let cursor = origin;
+      let bestTarget = origin;
+      let bestDist = Infinity;
 
-    cardRefs.current.forEach((el) => {
-      if (!el) return;
-      const aspect = Number(el.dataset.aspect || PHONE_ASPECT);
-      const width = el.parentElement?.offsetWidth || opts.maxHeight * aspect;
-      const dx = cursor + width / 2 - viewCenter;
-      const dist = Math.abs(dx);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestTarget = origin - dx;
-      }
-      cursor += width + currentGap;
-    });
+      cardRefs.current.forEach((el) => {
+        if (!el) return;
+        const aspect = Number(el.dataset.aspect || PHONE_ASPECT);
+        const width = el.parentElement?.offsetWidth || opts.maxHeight * aspect;
+        const dx = cursor + width / 2 - viewCenter;
+        const dist = Math.abs(dx);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestTarget = origin - dx;
+        }
+        cursor += width + currentGap;
+      });
 
-    animateSnap(bestTarget);
-  }, [animateSnap, x]);
+      animateSnap(bestTarget, velocity);
+    },
+    [animateSnap, x],
+  );
 
   const scheduleSnap = useCallback(() => {
     if (snapTimerRef.current !== null)
@@ -821,6 +856,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
         interruptSnap();
         pointerRef.current = null;
         draggingRef.current = false;
+        velocitySamplesRef.current = [];
         pinchStartRef.current = pinchDistance(touchPointsRef.current);
         pinchHandledRef.current = false;
         return;
@@ -831,6 +867,9 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     draggingRef.current = false;
     dragMovedRef.current = 0;
     pointerRef.current = { id: event.pointerId, lastX: event.clientX };
+    velocitySamplesRef.current = [
+      { t: performance.now(), x: event.clientX },
+    ];
   };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -861,6 +900,12 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     const dx = event.clientX - pointer.lastX;
     pointer.lastX = event.clientX;
     dragMovedRef.current += Math.abs(dx);
+    const now = performance.now();
+    const samples = velocitySamplesRef.current;
+    samples.push({ t: now, x: event.clientX });
+    while (samples.length > 1 && now - samples[0].t > VELOCITY_WINDOW_MS) {
+      samples.shift();
+    }
     if (!draggingRef.current && dragMovedRef.current > DRAG_CLICK_THRESHOLD) {
       draggingRef.current = true;
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -869,6 +914,20 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       x.set(x.get() + dx);
       applyTransforms();
     }
+  };
+
+  const releaseVelocity = () => {
+    const now = performance.now();
+    const samples = velocitySamplesRef.current.filter(
+      (sample) => now - sample.t <= VELOCITY_WINDOW_MS,
+    );
+    velocitySamplesRef.current = [];
+    if (samples.length < 2) return 0;
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const dt = last.t - first.t;
+    if (dt <= 0) return 0;
+    return ((last.x - first.x) / dt) * 1000;
   };
 
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -889,11 +948,19 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     if (event.type === "pointercancel") {
+      velocitySamplesRef.current = [];
       if (dragged) scheduleSnap();
       return;
     }
     if (dragged) {
-      scheduleSnap();
+      const velocity = releaseVelocity();
+      if (Math.abs(velocity) >= FLICK_MIN_VELOCITY) {
+        // Glide straight into the momentum snap; the idle timer is only for
+        // wheel bursts and slow releases.
+        snapToClosest(velocity);
+      } else {
+        scheduleSnap();
+      }
       return;
     }
 
