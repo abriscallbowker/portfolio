@@ -13,10 +13,11 @@ function scrolledToBottom(slack = 2) {
 
 export function SiteFooter() {
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
+  const staticFooter = pathname === "/" || pathname === "/about";
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    setVisible(false);
+    setRevealed(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -24,11 +25,11 @@ export function SiteFooter() {
 
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY > 0 && scrolledToBottom()) {
-        setVisible(true);
+        setRevealed(true);
         return;
       }
       if (event.deltaY < 0) {
-        setVisible(false);
+        setRevealed(false);
       }
     };
 
@@ -40,15 +41,15 @@ export function SiteFooter() {
       const y = event.touches[0]?.clientY ?? 0;
       const dy = touchY - y;
       if (dy > 10 && scrolledToBottom()) {
-        setVisible(true);
+        setRevealed(true);
       } else if (dy < -10) {
-        setVisible(false);
+        setRevealed(false);
       }
     };
 
     const onScroll = () => {
       if (!scrolledToBottom()) {
-        setVisible(false);
+        setRevealed(false);
       }
     };
 
@@ -61,7 +62,7 @@ export function SiteFooter() {
           event.key === "End") &&
         scrolledToBottom()
       ) {
-        setVisible(true);
+        setRevealed(true);
         return;
       }
       if (
@@ -69,7 +70,7 @@ export function SiteFooter() {
         event.key === "PageUp" ||
         event.key === "Home"
       ) {
-        setVisible(false);
+        setRevealed(false);
       }
     };
 
@@ -88,13 +89,25 @@ export function SiteFooter() {
     };
   }, []);
 
+  if (staticFooter) {
+    return (
+      // The negative top margin cancels most of the layout's pb-48 on
+      // <main>, which exists to clear the fixed footer on other pages.
+      <footer className="-mt-30 flex justify-center px-4 pb-10 pt-6">
+        <p className="text-body-xs text-subdued opacity-50">
+          {site.fullName} © {new Date().getFullYear()}
+        </p>
+      </footer>
+    );
+  }
+
   return (
     <footer className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-20 pt-6 max-md:pb-10">
       <motion.p
         className="text-body-xs text-subdued"
         initial={false}
-        animate={{opacity: visible ? 0.5 : 0}}
-        transition={visible ? linkTween : {duration: 0.12, ease: linkTween.ease}}
+        animate={{opacity: revealed ? 0.5 : 0}}
+        transition={revealed ? linkTween : {duration: 0.12, ease: linkTween.ease}}
       >
         {site.fullName} © {new Date().getFullYear()}
       </motion.p>
