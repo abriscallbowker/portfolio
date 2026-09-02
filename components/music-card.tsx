@@ -35,11 +35,11 @@ export function MusicCard() {
           <span className="inline-flex items-center gap-1.5 text-body-xs text-subdued">
             Listen on SoundCloud
             <span
-              className="inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] bg-[#d6d6d6] p-0.5"
+              className="inline-flex size-4 shrink-0 items-center justify-center bg-[#d6d6d6] p-0.5"
               aria-hidden
             >
-              <img
-                src="/about/soundcloud.svg"
+              <Image
+                src="/icons/soundcloud.svg"
                 alt=""
                 width={12}
                 height={12}
@@ -65,4 +65,3 @@ export function MusicCard() {
     </div>
   );
 }
-

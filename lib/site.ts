@@ -82,16 +82,16 @@ export const music = {
 
 export const socials = [
   {
-    title: "Email",
-    handle: "alex@visualbinary.com",
-    href: "mailto:alex@visualbinary.com",
-    icon: "email" as const,
-  },
-  {
-    title: "X.com",
+    title: "X",
     handle: "@alexbbowker",
     href: "https://x.com/alexbbowker",
     icon: "x" as const,
+  },
+  {
+    title: "LinkedIn",
+    handle: "/in/abriscallbowker",
+    href: "https://www.linkedin.com/in/abriscallbowker/",
+    icon: "linkedin" as const,
   },
   {
     title: "GitHub",
@@ -100,9 +100,15 @@ export const socials = [
     icon: "github" as const,
   },
   {
-    title: "LinkedIn",
-    handle: "/in/abriscallbowker",
-    href: "https://www.linkedin.com/in/abriscallbowker/",
-    icon: "linkedin" as const,
+    title: "SoundCloud",
+    handle: "@noisecomplaintdj",
+    href: "https://soundcloud.com/noisecomplaintdj",
+    icon: "soundcloud" as const,
+  },
+  {
+    title: "Email",
+    handle: "alex@visualbinary.com",
+    href: "mailto:alex@visualbinary.com",
+    icon: "email" as const,
   },
 ];

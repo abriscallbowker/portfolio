@@ -9,7 +9,7 @@ import {useCallback, useLayoutEffect, useRef, useState} from "react";
 const tabs = [
   {href: "/", label: "About"},
   {href: "/writing", label: "Writing"},
-  {href: "/products", label: "Products"},
+  {href: "/showcase", label: "Showcase"},
 ] as const;
 
 const HOVER_GROW = 0.28;

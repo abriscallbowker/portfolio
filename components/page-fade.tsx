@@ -18,9 +18,9 @@ const tabSlideVariants = {
   }),
 };
 
-// The products imagery reads as clutter when it lingers over incoming
+// The showcase imagery reads as clutter when it lingers over incoming
 // text-heavy tabs, so it fades out near-instantly instead of sliding.
-const productsSlideVariants = {
+const showcaseSlideVariants = {
   ...tabSlideVariants,
   exit: {
     opacity: 0,
@@ -31,7 +31,7 @@ const productsSlideVariants = {
 
 function tabIndex(segment: string | null) {
   if (segment === "writing") return 1;
-  if (segment === "products") return 2;
+  if (segment === "showcase") return 2;
   return 0;
 }
 
@@ -98,7 +98,7 @@ export function PageFade({children}: {children: ReactNode}) {
             key={segment ?? "about"}
             className="col-start-1 row-start-1 w-full"
             custom={direction}
-            variants={segment === "products" ? productsSlideVariants : tabSlideVariants}
+            variants={segment === "showcase" ? showcaseSlideVariants : tabSlideVariants}
             initial="enter"
             animate="center"
             exit="exit"

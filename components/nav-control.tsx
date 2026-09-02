@@ -25,11 +25,11 @@ export function NavControl({
 }: NavControlProps) {
   const router = useRouter();
   const previousPathname = usePreviousPathname();
-  // Send the home button back to products when that's where the
+  // Send the home button back to the showcase when that's where the
   // visitor came from, so it acts as a "return" rather than a reset.
-  const cameFromProducts = icon === "home" && previousPathname === "/products";
-  const href = cameFromProducts ? "/products" : defaultHref;
-  const label = cameFromProducts ? "Back to products" : defaultLabel;
+  const cameFromShowcase = icon === "home" && previousPathname === "/showcase";
+  const href = cameFromShowcase ? "/showcase" : defaultHref;
+  const label = cameFromShowcase ? "Back to showcase" : defaultLabel;
   const shortcut = shortcutForIcon[icon];
   const [scrolled, setScrolled] = useState(false);
 

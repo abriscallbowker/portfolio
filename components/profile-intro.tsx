@@ -12,7 +12,7 @@ import Image from "next/image";
 import {usePathname} from "next/navigation";
 import {useRef, useState} from "react";
 
-const tabOrder = ["/", "/writing", "/products"];
+const tabOrder = ["/", "/writing", "/showcase"];
 
 // Matches PageFade's slide so the filter moves with the page content:
 // entering from a lower-index tab slides in from the right, and vice versa.
