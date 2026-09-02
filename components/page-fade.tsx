@@ -18,9 +18,9 @@ const tabSlideVariants = {
   }),
 };
 
-// The gallery's imagery reads as clutter when it lingers over incoming
+// The products imagery reads as clutter when it lingers over incoming
 // text-heavy tabs, so it fades out near-instantly instead of sliding.
-const gallerySlideVariants = {
+const productsSlideVariants = {
   ...tabSlideVariants,
   exit: {
     opacity: 0,
@@ -30,8 +30,8 @@ const gallerySlideVariants = {
 };
 
 function tabIndex(segment: string | null) {
-  if (segment === "archive") return 1;
-  if (segment === "gallery") return 2;
+  if (segment === "writing") return 1;
+  if (segment === "products") return 2;
   return 0;
 }
 
@@ -98,7 +98,7 @@ export function PageFade({children}: {children: ReactNode}) {
             key={segment ?? "about"}
             className="col-start-1 row-start-1 w-full"
             custom={direction}
-            variants={segment === "gallery" ? gallerySlideVariants : tabSlideVariants}
+            variants={segment === "products" ? productsSlideVariants : tabSlideVariants}
             initial="enter"
             animate="center"
             exit="exit"

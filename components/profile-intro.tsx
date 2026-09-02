@@ -12,7 +12,7 @@ import Image from "next/image";
 import {usePathname} from "next/navigation";
 import {useRef, useState} from "react";
 
-const tabOrder = ["/", "/archive", "/gallery"];
+const tabOrder = ["/", "/writing", "/products"];
 
 // Matches PageFade's slide so the filter moves with the page content:
 // entering from a lower-index tab slides in from the right, and vice versa.
@@ -28,7 +28,7 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
   const reduceMotion = useReducedMotion();
   const instant = skipIntro || Boolean(reduceMotion);
   const pathname = usePathname();
-  const isArchive = pathname === "/archive";
+  const isWriting = pathname === "/writing";
 
   const tabIndex = tabOrder.indexOf(pathname);
   const previousIndex = useRef(tabIndex);
@@ -66,7 +66,7 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
           <div className="flex flex-col">
             <PageTabs />
             <AnimatePresence initial={false} custom={direction}>
-              {isArchive ? (
+              {isWriting ? (
                 <motion.div
                   key="category-filter"
                   custom={direction}

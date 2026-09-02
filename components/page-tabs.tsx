@@ -8,8 +8,8 @@ import {useCallback, useLayoutEffect, useRef, useState} from "react";
 
 const tabs = [
   {href: "/", label: "About"},
-  {href: "/archive", label: "Archive"},
-  {href: "/gallery", label: "Gallery"},
+  {href: "/writing", label: "Writing"},
+  {href: "/products", label: "Products"},
 ] as const;
 
 const HOVER_GROW = 0.28;

@@ -982,7 +982,7 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
       <section
         ref={sectionRef}
         className="flex w-full flex-col items-center"
-        aria-label="Gallery"
+        aria-label="Products"
         inert={zoomedItem ? true : undefined}
       >
       <div

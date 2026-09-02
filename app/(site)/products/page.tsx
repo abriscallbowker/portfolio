@@ -6,11 +6,11 @@ import type {ScreenshotItem} from "@/sanity/lib/types";
 import type {Metadata} from "next";
 
 export const metadata: Metadata = {
-  title: "Gallery",
+  title: "Products",
   description: site.description,
 };
 
-export default async function GalleryPage() {
+export default async function ProductsPage() {
   const {data} = await sanityFetch({
     query: SCREENSHOTS_QUERY,
     stega: false,
