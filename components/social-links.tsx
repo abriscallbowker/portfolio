@@ -49,7 +49,7 @@ function ArrowUpRight() {
   );
 }
 
-function SocialIcon({name}: {name: (typeof socials)[number]["icon"]}) {
+export function SocialIcon({name}: {name: (typeof socials)[number]["icon"]}) {
   if (name === "email") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

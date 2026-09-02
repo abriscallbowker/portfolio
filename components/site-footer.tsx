@@ -13,10 +13,9 @@ function scrolledToBottom(slack = 2) {
 
 export function SiteFooter() {
   const pathname = usePathname();
+  const hidden = pathname === "/";
   const staticFooter =
-    pathname === "/" ||
-    pathname === "/archive" ||
-    pathname.startsWith("/writing/");
+    pathname === "/archive" || pathname.startsWith("/writing/");
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -91,6 +90,10 @@ export function SiteFooter() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
+  if (hidden) {
+    return null;
+  }
 
   if (staticFooter) {
     return (
