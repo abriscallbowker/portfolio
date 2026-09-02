@@ -10,7 +10,12 @@ export const metadata: Metadata = {
   description: site.description,
 };
 
-export default async function ShowcasePage() {
+export default async function ShowcasePage({
+  searchParams,
+}: {
+  searchParams: Promise<{card?: string | string[]}>;
+}) {
+  const card = (await searchParams).card;
   const {data} = await sanityFetch({
     query: SCREENSHOTS_QUERY,
     stega: false,
@@ -18,7 +23,11 @@ export default async function ShowcasePage() {
 
   return (
     <div className="w-full">
-      <ShowcaseCarousel items={(data as ScreenshotItem[] | null) ?? []} />
+      <ShowcaseCarousel
+        key={typeof card === "string" ? card : "default"}
+        items={(data as ScreenshotItem[] | null) ?? []}
+        initialActiveId={typeof card === "string" ? card : undefined}
+      />
     </div>
   );
 }

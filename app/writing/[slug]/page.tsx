@@ -19,6 +19,7 @@ import {notFound} from "next/navigation";
 
 type WritingPageProps = {
   params: Promise<{slug: string}>;
+  searchParams: Promise<{card?: string | string[]}>;
 };
 
 export async function generateStaticParams() {
@@ -48,8 +49,13 @@ export async function generateMetadata({
   };
 }
 
-export default async function WritingPage({params}: WritingPageProps) {
+export default async function WritingPage({
+  params,
+  searchParams,
+}: WritingPageProps) {
   const {slug} = await params;
+  const card = (await searchParams).card;
+  const showcaseCardId = typeof card === "string" ? card : null;
   const [{data: post}, {data: more}] = await Promise.all([
     sanityFetch({
       query: WRITING_BY_SLUG_QUERY,
@@ -71,7 +77,16 @@ export default async function WritingPage({params}: WritingPageProps) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <NavControl href="/writing" label="Writing" icon="home" position="left" />
+      <NavControl
+        href={
+          showcaseCardId
+            ? `/showcase?card=${encodeURIComponent(showcaseCardId)}`
+            : "/writing"
+        }
+        label={showcaseCardId ? "Back to showcase" : "Writing"}
+        icon="home"
+        position="left"
+      />
       <AppearFade delay={0} className="flex flex-1 flex-col">
         <main className="flex flex-1 flex-col items-center pb-48 pt-24">
           <article className="site-column flex w-full flex-col gap-8 px-4">
@@ -95,7 +110,10 @@ export default async function WritingPage({params}: WritingPageProps) {
             <div className="px-4">
               <p className="text-overline text-subdued">More</p>
             </div>
-            <WritingList posts={morePosts} />
+            <WritingList
+              posts={morePosts}
+              showcaseCardId={showcaseCardId ?? undefined}
+            />
           </section>
         </main>
         <SiteFooter />

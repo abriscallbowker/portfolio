@@ -28,7 +28,10 @@ export function NavControl({
   // Send the home button back to the showcase when that's where the
   // visitor came from, so it acts as a "return" rather than a reset.
   const cameFromShowcase = icon === "home" && previousPathname === "/showcase";
-  const href = cameFromShowcase ? "/showcase" : defaultHref;
+  const showcaseHref = defaultHref.startsWith("/showcase")
+    ? defaultHref
+    : "/showcase";
+  const href = cameFromShowcase ? showcaseHref : defaultHref;
   const label = cameFromShowcase ? "Back to showcase" : defaultLabel;
   const shortcut = shortcutForIcon[icon];
   const [scrolled, setScrolled] = useState(false);

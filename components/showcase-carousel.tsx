@@ -393,10 +393,19 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
   );
 });
 
-export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
+export function ShowcaseCarousel({
+  items,
+  initialActiveId,
+}: {
+  items: ScreenshotItem[];
+  initialActiveId?: string;
+}) {
   const reduceMotion = useReducedMotion();
   const md = useIsMd();
-  const [activeId, setActiveId] = useState(items[0]?._id ?? null);
+  const requestedActiveId = items.some((item) => item._id === initialActiveId)
+    ? initialActiveId
+    : items[0]?._id;
+  const [activeId, setActiveId] = useState(requestedActiveId ?? null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [zoomedItem, setZoomedItem] = useState<ScreenshotItem | null>(null);
   const canPortal = useSyncExternalStore(
@@ -606,8 +615,17 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     const viewCenter = containerWidth / 2;
     if (!initializedRef.current) {
       initializedRef.current = true;
-      x.set(-setWidth + viewCenter - widths[0] / 2);
-      setActiveId(items[0]._id);
+      const initialIndex = Math.max(
+        0,
+        items.findIndex((item) => item._id === requestedActiveId),
+      );
+      x.set(
+        -setWidth +
+          viewCenter -
+          starts[initialIndex] -
+          widths[initialIndex] / 2,
+      );
+      setActiveId(items[initialIndex]._id);
       // Paint the first frame with transforms already applied instead of
       // waiting for the next animation frame.
       applyTransforms();
@@ -634,7 +652,15 @@ export function ShowcaseCarousel({ items }: { items: ScreenshotItem[] }) {
     }
     x.set(best);
     applyTransforms();
-  }, [applyTransforms, containerWidth, copies, items, layout, x]);
+  }, [
+    applyTransforms,
+    containerWidth,
+    copies,
+    items,
+    layout,
+    requestedActiveId,
+    x,
+  ]);
 
   useAnimationFrame(() => {
     if (itemsRef.current.length === 0) return;
@@ -1887,7 +1913,12 @@ function ShowcaseCaption({
   const linkedSlug = item.linkedSlug?.trim();
   const linkedSlugText = item.linkedSlugText?.trim();
   const writingHref =
-    linkedSlug && linkedSlugText ? `/writing/${linkedSlug}` : null;
+    linkedSlug && linkedSlugText
+      ? {
+          pathname: `/writing/${linkedSlug}`,
+          query: {card: item._id},
+        }
+      : null;
 
   return (
     <div
