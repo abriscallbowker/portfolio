@@ -238,7 +238,9 @@ body {
   width: 100%;
   height: 72px;
   pointer-events: none;
-  z-index: 15;
+  /* Above the intro/footer (z-20) so headshot, greeting, and
+     scrolling copy go under the glass; below chrome like .home-button. */
+  z-index: 30;
 }
 
 .progressive-blur-wrap--top {
