@@ -1,12 +1,12 @@
-import {SocialLinks} from "@/components/social-links";
+import { SocialLinks } from "@/components/social-links";
 
 export function AboutBio() {
   return (
     <div className="flex flex-col gap-5 text-body-md text-ink">
       <div className="flex flex-col gap-5 px-4">
-        <p>Currently lead Product Design at Prax Industries.</p>
+        <p>Product Designer at Prax Industries.</p>
         <p>Previously worked at Caura and JPMorgan.</p>
-        <p>Also ran the digital product studio Visual Binary.</p>
+        <p>Also ran the product studio Visual Binary.</p>
         <p>
           I first got into design by selling graphics on Shutterstock back in
           2015.
