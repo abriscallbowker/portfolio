@@ -1,21 +1,21 @@
 "use client";
 
-import {SwappingLabel} from "@/components/swapping-label";
-import {linkTween} from "@/lib/motion";
-import {site} from "@/lib/site";
-import {motion} from "motion/react";
-import {usePathname} from "next/navigation";
-import {useEffect, useRef, useState} from "react";
+import { SwappingLabel } from "@/components/swapping-label";
+import { linkTween } from "@/lib/motion";
+import { site } from "@/lib/site";
+import { motion } from "motion/react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 function scrolledToBottom(slack = 2) {
   const root = document.scrollingElement ?? document.documentElement;
   return root.scrollTop + window.innerHeight >= root.scrollHeight - slack;
 }
 
-const JAN_2024_MS = Date.UTC(2024, 0, 1);
+const JAN_2015_MS = Date.UTC(2015, 0, 1);
 
-function secondsSinceJan2024(now = Date.now()) {
-  return Math.max(0, Math.floor((now - JAN_2024_MS) / 1000));
+function secondsSinceJan2015(now = Date.now()) {
+  return Math.max(0, Math.floor((now - JAN_2015_MS) / 1000));
 }
 
 function hasFineHover() {
@@ -99,10 +99,10 @@ function FooterSwap({
 }
 
 export function HomeFooter() {
-  const [seconds, setSeconds] = useState(secondsSinceJan2024);
+  const [seconds, setSeconds] = useState(secondsSinceJan2015);
 
   useEffect(() => {
-    const tick = () => setSeconds(secondsSinceJan2024());
+    const tick = () => setSeconds(secondsSinceJan2015());
     tick();
 
     const delay = 1000 - (Date.now() % 1000);
@@ -133,7 +133,7 @@ export function HomeFooter() {
         />
         <FooterSwap
           primary={seconds.toLocaleString("en-US")}
-          alternate="Seconds since I created this site"
+          alternate="I fell in love with design in 2015"
           align="right"
           suppressHydrationWarning
         />
@@ -206,10 +206,10 @@ export function SiteFooter() {
       }
     };
 
-    window.addEventListener("wheel", onWheel, {passive: true});
-    window.addEventListener("touchstart", onTouchStart, {passive: true});
-    window.addEventListener("touchmove", onTouchMove, {passive: true});
-    window.addEventListener("scroll", onScroll, {passive: true});
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
@@ -232,8 +232,10 @@ export function SiteFooter() {
       <motion.p
         className="text-body-xs text-subdued"
         initial={false}
-        animate={{opacity: revealed ? 0.5 : 0}}
-        transition={revealed ? linkTween : {duration: 0.12, ease: linkTween.ease}}
+        animate={{ opacity: revealed ? 0.5 : 0 }}
+        transition={
+          revealed ? linkTween : { duration: 0.12, ease: linkTween.ease }
+        }
       >
         {site.fullName} © {new Date().getFullYear()}
       </motion.p>
