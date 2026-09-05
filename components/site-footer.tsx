@@ -145,8 +145,7 @@ export function HomeFooter() {
 export function SiteFooter() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const staticFooter =
-    pathname === "/writing" || pathname.startsWith("/writing/");
+  const isWriting = pathname === "/writing";
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -223,23 +222,9 @@ export function SiteFooter() {
   }, []);
 
   // About renders HomeFooter inside PageFade so it slides with the page.
-  if (isHome) {
+  // Writing has no site footer.
+  if (isHome || isWriting) {
     return null;
-  }
-
-  if (staticFooter) {
-    return (
-      // The negative top margin cancels most of the layout's pb-48 on
-      // <main>, which exists to clear the fixed footer on other pages.
-      <footer className="-mt-30 flex justify-center pb-10 pt-6">
-        <div className="site-column flex w-full items-center justify-between px-4">
-          <p className="text-body-xs text-subdued opacity-50">{site.fullName}</p>
-          <p className="text-body-xs text-subdued opacity-50">
-            © {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
-    );
   }
 
   return (

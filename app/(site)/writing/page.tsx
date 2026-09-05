@@ -24,7 +24,7 @@ export default async function WritingPage() {
   ]);
 
   return (
-    <div className="site-column w-full">
+    <div className="site-column w-full -mb-48 pb-10">
       <WritingList
         posts={(data as WritingListItem[] | null) ?? []}
         filterable

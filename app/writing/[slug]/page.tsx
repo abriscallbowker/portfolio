@@ -1,7 +1,6 @@
 import {AppearFade} from "@/components/appear";
 import {NavControl} from "@/components/nav-control";
 import {PortableBody} from "@/components/portable-body";
-import {SiteFooter} from "@/components/site-footer";
 import {WritingList} from "@/components/writing-list";
 import {formatArticleDate} from "@/lib/dates";
 import {site} from "@/lib/site";
@@ -88,7 +87,7 @@ export default async function WritingPage({
         position="left"
       />
       <AppearFade delay={0} className="flex flex-1 flex-col">
-        <main className="flex flex-1 flex-col items-center pb-48 pt-24">
+        <main className="flex flex-1 flex-col items-center pb-16 pt-24">
           <article className="site-column flex w-full flex-col gap-8 px-4">
             <header className="flex flex-col gap-8">
               <div className="flex items-center justify-between gap-3 text-overline text-subdued">
@@ -116,7 +115,6 @@ export default async function WritingPage({
             />
           </section>
         </main>
-        <SiteFooter />
       </AppearFade>
     </div>
   );
