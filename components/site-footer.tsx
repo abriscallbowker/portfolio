@@ -98,7 +98,7 @@ function FooterSwap({
   );
 }
 
-function HomeFooter() {
+export function HomeFooter() {
   const [seconds, setSeconds] = useState(secondsSinceJan2024);
 
   useEffect(() => {
@@ -121,9 +121,10 @@ function HomeFooter() {
   }, []);
 
   return (
-    // The negative top margin cancels most of the layout's pb-48 on
-    // <main>, which exists to clear the fixed footer on other pages.
-    <footer className="-mt-30 flex justify-center pb-10 pt-6">
+    // Cancel <main>'s pb-48 (needed to clear the fixed footer on other
+    // pages) now that this footer lives inside PageFade with the about
+    // content, so it doesn't leave a large empty pad below.
+    <footer className="-mb-48 flex justify-center pb-10 pt-12">
       <div className="site-column flex w-full items-center justify-between px-4">
         <FooterSwap
           primary="51.51° N, 0.13° W"
@@ -221,8 +222,9 @@ export function SiteFooter() {
     };
   }, []);
 
+  // About renders HomeFooter inside PageFade so it slides with the page.
   if (isHome) {
-    return <HomeFooter />;
+    return null;
   }
 
   if (staticFooter) {

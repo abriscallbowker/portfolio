@@ -5,7 +5,7 @@ import {useGreetingReveal} from "@/components/greeting-reveal";
 import {appearFade, tabSlide} from "@/lib/motion";
 import {LayoutRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
 import {AnimatePresence, motion} from "motion/react";
-import {useSelectedLayoutSegment} from "next/navigation";
+import {usePathname, useSelectedLayoutSegment} from "next/navigation";
 import {useContext, useEffect, useRef, useState, type ReactNode} from "react";
 
 const tabSlideVariants = {
@@ -48,20 +48,24 @@ function FrozenRouter({children}: {children: ReactNode}) {
   );
 }
 
-export function SiteEnter({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+export function SiteEnter({children}: {children: ReactNode}) {
   const {played} = useGreetingReveal();
   const [skipIntro] = useState(played);
+  const pathname = usePathname();
+  const fillViewport = pathname !== "/";
 
   return (
-    <AppearFade delay={0} instant={!skipIntro} className={className}>
-      {children}
-    </AppearFade>
+    <div className={fillViewport ? "flex min-h-full flex-col" : "flex flex-col"}>
+      <AppearFade
+        delay={0}
+        instant={!skipIntro}
+        className={
+          fillViewport ? "flex min-h-full flex-1 flex-col" : "flex flex-col"
+        }
+      >
+        {children}
+      </AppearFade>
+    </div>
   );
 }
 
