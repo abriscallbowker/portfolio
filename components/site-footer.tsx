@@ -11,9 +11,44 @@ function scrolledToBottom(slack = 2) {
   return root.scrollTop + window.innerHeight >= root.scrollHeight - slack;
 }
 
+const JAN_2024_MS = Date.UTC(2024, 0, 1);
+
+function secondsSinceJan2024(now = Date.now()) {
+  return Math.max(0, Math.floor((now - JAN_2024_MS) / 1000));
+}
+
+function SecondsSinceJan2024() {
+  const [seconds, setSeconds] = useState(secondsSinceJan2024);
+
+  useEffect(() => {
+    const tick = () => setSeconds(secondsSinceJan2024());
+    tick();
+
+    const delay = 1000 - (Date.now() % 1000);
+    let intervalId: number | undefined;
+    const timeoutId = window.setTimeout(() => {
+      tick();
+      intervalId = window.setInterval(tick, 1000);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  return (
+    <span suppressHydrationWarning className="tabular-nums">
+      {seconds.toLocaleString("en-US")}
+    </span>
+  );
+}
+
 export function SiteFooter() {
   const pathname = usePathname();
-  const hidden = pathname === "/";
+  const isHome = pathname === "/";
   const staticFooter =
     pathname === "/writing" || pathname.startsWith("/writing/");
   const [revealed, setRevealed] = useState(false);
@@ -91,8 +126,19 @@ export function SiteFooter() {
     };
   }, []);
 
-  if (hidden) {
-    return null;
+  if (isHome) {
+    return (
+      // The negative top margin cancels most of the layout's pb-48 on
+      // <main>, which exists to clear the fixed footer on other pages.
+      <footer className="-mt-30 flex justify-center pb-10 pt-6">
+        <div className="site-column flex w-full items-center justify-between px-4 text-body-xs text-subdued opacity-50">
+          <p>51.51° N, 0.13° W</p>
+          <p>
+            <SecondsSinceJan2024 />
+          </p>
+        </div>
+      </footer>
+    );
   }
 
   if (staticFooter) {

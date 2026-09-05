@@ -50,7 +50,7 @@ function PhotoCard({
 export function PhotoCollage() {
   return (
     <div className="w-full overflow-visible">
-      <div className="relative mx-auto hidden h-[288px] w-full max-w-[608px] overflow-visible pt-10 md:block">
+      <div className="relative mx-auto mt-8 hidden h-[288px] w-full max-w-[608px] overflow-visible pt-10 md:block">
         {personalPhotos.map((photo) => (
           <PhotoCard
             key={photo.src}

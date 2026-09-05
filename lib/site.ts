@@ -88,6 +88,12 @@ export const socials = [
     icon: "x" as const,
   },
   {
+    title: "Instagram",
+    handle: "@alexbriscallbowker",
+    href: "https://www.instagram.com/alexbriscallbowker",
+    icon: "instagram" as const,
+  },
+  {
     title: "LinkedIn",
     handle: "/in/abriscallbowker",
     href: "https://www.linkedin.com/in/abriscallbowker/",
