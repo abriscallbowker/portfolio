@@ -1,66 +1,11 @@
 "use client";
 
 import {HoverFadeOverlay} from "@/components/hover-fade-overlay";
-import {hoverSpring} from "@/lib/motion";
+import {SwappingLabel} from "@/components/swapping-label";
 import {experience, type ExperienceItem} from "@/lib/site";
-import {motion, useReducedMotion} from "motion/react";
+import {motion} from "motion/react";
 import Image from "next/image";
-import {useLayoutEffect, useRef, useState} from "react";
-
-function SwappingLabel({
-  primary,
-  alternate,
-  active,
-}: {
-  primary: string;
-  alternate: string;
-  active: boolean;
-}) {
-  const primaryRef = useRef<HTMLSpanElement>(null);
-  const alternateRef = useRef<HTMLSpanElement>(null);
-  const [width, setWidth] = useState<number>();
-  const animateWidth = useRef(false);
-  const reduceMotion = useReducedMotion();
-  const transition = reduceMotion ? {duration: 0} : hoverSpring;
-  const widthTransition = animateWidth.current ? transition : {duration: 0};
-
-  useLayoutEffect(() => {
-    const el = active ? alternateRef.current : primaryRef.current;
-    if (el) setWidth(el.offsetWidth);
-  }, [active, primary, alternate]);
-
-  useLayoutEffect(() => {
-    if (width !== undefined) animateWidth.current = true;
-  }, [width]);
-
-  return (
-    <motion.span
-      className="relative inline-block h-6 overflow-hidden align-bottom"
-      initial={false}
-      animate={{width: width ?? "auto"}}
-      transition={widthTransition}
-    >
-      <motion.span
-        ref={primaryRef}
-        className="absolute top-0 left-0 whitespace-nowrap text-body-md text-ink"
-        initial={false}
-        animate={{y: active ? -12 : 0, opacity: active ? 0 : 1}}
-        transition={transition}
-      >
-        {primary}
-      </motion.span>
-      <motion.span
-        ref={alternateRef}
-        className="absolute top-0 left-0 whitespace-nowrap text-body-md text-ink"
-        initial={false}
-        animate={{y: active ? 0 : 12, opacity: active ? 1 : 0}}
-        transition={transition}
-      >
-        {alternate}
-      </motion.span>
-    </motion.span>
-  );
-}
+import {useState} from "react";
 
 function CompanyBadge({item}: {item: ExperienceItem}) {
   const [hovered, setHovered] = useState(false);

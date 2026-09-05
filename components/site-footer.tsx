@@ -1,10 +1,11 @@
 "use client";
 
+import {SwappingLabel} from "@/components/swapping-label";
 import {linkTween} from "@/lib/motion";
 import {site} from "@/lib/site";
 import {motion} from "motion/react";
 import {usePathname} from "next/navigation";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 
 function scrolledToBottom(slack = 2) {
   const root = document.scrollingElement ?? document.documentElement;
@@ -17,7 +18,87 @@ function secondsSinceJan2024(now = Date.now()) {
   return Math.max(0, Math.floor((now - JAN_2024_MS) / 1000));
 }
 
-function SecondsSinceJan2024() {
+function hasFineHover() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
+function FooterSwap({
+  primary,
+  alternate,
+  align,
+  suppressHydrationWarning = false,
+}: {
+  primary: string;
+  alternate: string;
+  align: "left" | "right";
+  suppressHydrationWarning?: boolean;
+}) {
+  const [active, setActive] = useState(false);
+  const closeOnLeave = useRef(true);
+  const rootRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setActive(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActive(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [active]);
+
+  return (
+    <button
+      ref={rootRef}
+      type="button"
+      aria-label={`${primary}. ${alternate}`}
+      className="inline-flex cursor-pointer touch-manipulation items-center opacity-50"
+      onPointerEnter={(event) => {
+        if (event.pointerType === "touch") return;
+        closeOnLeave.current = true;
+        setActive(true);
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "touch" || !closeOnLeave.current) return;
+        setActive(false);
+      }}
+      onFocus={() => {
+        if (hasFineHover()) setActive(true);
+      }}
+      onBlur={() => {
+        if (hasFineHover()) setActive(false);
+      }}
+      onClick={() => {
+        if (hasFineHover()) return;
+        closeOnLeave.current = false;
+        setActive((value) => !value);
+      }}
+    >
+      <SwappingLabel
+        primary={primary}
+        alternate={alternate}
+        active={active}
+        align={align}
+        className={`text-body-xs text-subdued ${align === "right" ? "tabular-nums" : ""}`}
+        heightClassName="h-[18px]"
+        offset={9}
+        suppressHydrationWarning={suppressHydrationWarning}
+      />
+    </button>
+  );
+}
+
+function HomeFooter() {
   const [seconds, setSeconds] = useState(secondsSinceJan2024);
 
   useEffect(() => {
@@ -40,9 +121,23 @@ function SecondsSinceJan2024() {
   }, []);
 
   return (
-    <span suppressHydrationWarning className="tabular-nums">
-      {seconds.toLocaleString("en-US")}
-    </span>
+    // The negative top margin cancels most of the layout's pb-48 on
+    // <main>, which exists to clear the fixed footer on other pages.
+    <footer className="-mt-30 flex justify-center pb-10 pt-6">
+      <div className="site-column flex w-full items-center justify-between px-4">
+        <FooterSwap
+          primary="51.51° N, 0.13° W"
+          alternate="Currently working in London"
+          align="left"
+        />
+        <FooterSwap
+          primary={seconds.toLocaleString("en-US")}
+          alternate="Seconds since I created this site"
+          align="right"
+          suppressHydrationWarning
+        />
+      </div>
+    </footer>
   );
 }
 
@@ -127,18 +222,7 @@ export function SiteFooter() {
   }, []);
 
   if (isHome) {
-    return (
-      // The negative top margin cancels most of the layout's pb-48 on
-      // <main>, which exists to clear the fixed footer on other pages.
-      <footer className="-mt-30 flex justify-center pb-10 pt-6">
-        <div className="site-column flex w-full items-center justify-between px-4 text-body-xs text-subdued opacity-50">
-          <p>51.51° N, 0.13° W</p>
-          <p>
-            <SecondsSinceJan2024 />
-          </p>
-        </div>
-      </footer>
-    );
+    return <HomeFooter />;
   }
 
   if (staticFooter) {
