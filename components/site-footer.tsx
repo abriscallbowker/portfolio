@@ -231,10 +231,13 @@ export function SiteFooter() {
     return (
       // The negative top margin cancels most of the layout's pb-48 on
       // <main>, which exists to clear the fixed footer on other pages.
-      <footer className="-mt-30 flex justify-center px-4 pb-10 pt-6">
-        <p className="text-body-xs text-subdued opacity-50">
-          {site.fullName} © {new Date().getFullYear()}
-        </p>
+      <footer className="-mt-30 flex justify-center pb-10 pt-6">
+        <div className="site-column flex w-full items-center justify-between px-4">
+          <p className="text-body-xs text-subdued opacity-50">{site.fullName}</p>
+          <p className="text-body-xs text-subdued opacity-50">
+            © {new Date().getFullYear()}
+          </p>
+        </div>
       </footer>
     );
   }
