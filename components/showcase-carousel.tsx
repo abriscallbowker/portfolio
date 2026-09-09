@@ -128,7 +128,7 @@ type CardSize = {
 };
 
 function idealHeight(md: boolean) {
-  return md ? 440 : 340;
+  return md ? 440 : 380;
 }
 
 function cardGap(md: boolean) {
@@ -311,19 +311,14 @@ function useCarouselBudget(
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!enabled || !section) return;
+    if (!enabled || !section || !md) return;
 
-    let measuredWidth: number | null = null;
     const update = () => {
-      const width = document.documentElement.clientWidth;
-      // Mobile browser chrome changes viewport height while scrolling.
-      // Keep the initial card budget until the layout width changes.
-      if (!md && measuredWidth === width) return;
-      measuredWidth = width;
-      const vv = window.visualViewport;
-      const viewportBottom =
-        (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight);
-      const top = section.getBoundingClientRect().top + (md ? 0 : window.scrollY);
+      // Use document coordinates even before navigation resets the scroll.
+      // Visual viewport offsets (scrolling / zoom / browser chrome) must not
+      // affect the dimensions of the carousel's layout.
+      const viewportBottom = document.documentElement.clientHeight;
+      const top = section.getBoundingClientRect().top + window.scrollY;
       const available =
         viewportBottom - top - CAPTION_RESERVE - bottomClearance(md);
       const next = Math.max(
@@ -343,7 +338,10 @@ function useCarouselBudget(
     };
   }, [enabled, md, sectionRef]);
 
-  return maxCardHeight;
+  // Mobile is a scrolling layout: reserve a consistent media size instead
+  // of squeezing cards into the space remaining below the profile header.
+  // This also stays identical on remount with browser chrome expanded or hidden.
+  return md ? maxCardHeight : idealHeight(false);
 }
 
 function wheelDelta(event: WheelEvent) {

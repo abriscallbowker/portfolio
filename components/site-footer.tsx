@@ -124,8 +124,8 @@ export function HomeFooter() {
     // Cancel <main>'s pb-48 (needed to clear the fixed footer on other
     // pages) now that this footer lives inside PageFade with the about
     // content, so it doesn't leave a large empty pad below.
-    <footer className="-mb-48 flex justify-center pb-10 pt-12">
-      <div className="site-column flex w-full items-center justify-between px-4">
+    <footer className="-mb-48 flex justify-center pb-10 md:pt-12">
+      <div className="site-column hidden w-full items-center justify-between px-4 md:flex">
         <FooterSwap
           primary="51.51° N, 0.13° W"
           alternate="Currently working in London"
