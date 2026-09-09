@@ -62,6 +62,17 @@ function ScrollToTop() {
   }, []);
 
   useLayoutEffect(() => {
+    if (isShowcasePath(pathname)) {
+      isFirstNavigation.current = false;
+      const resetScroll = () => {
+        window.scrollTo({top: 0, left: 0, behavior: "instant"});
+      };
+      resetScroll();
+      // Reassert after the router applies its own navigation scroll handling.
+      const frame = requestAnimationFrame(resetScroll);
+      return () => cancelAnimationFrame(frame);
+    }
+
     if (isFirstNavigation.current) {
       isFirstNavigation.current = false;
       return;
