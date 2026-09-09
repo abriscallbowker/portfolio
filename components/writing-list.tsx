@@ -26,10 +26,8 @@ const itemShown = {scale: 1, opacity: 1};
 
 function WritingListItem({
   post,
-  showcaseCardId,
 }: {
   post: WritingListItem;
-  showcaseCardId?: string;
 }) {
   const coverUrl = post.coverImage?.asset
     ? urlFor(post.coverImage).width(128).height(132).fit("crop").url()
@@ -37,14 +35,8 @@ function WritingListItem({
 
   return (
     <MotionLink
-      href={
-        showcaseCardId
-          ? {
-              pathname: `/writing/${post.slug}`,
-              query: {card: showcaseCardId},
-            }
-          : `/writing/${post.slug}`
-      }
+      href={`/writing/${post.slug}`}
+      scroll={false}
       className="relative flex items-center px-4 py-2"
       initial="rest"
       animate="rest"
@@ -81,11 +73,9 @@ function WritingListItem({
 export function WritingList({
   posts,
   filterable = false,
-  showcaseCardId,
 }: {
   posts: WritingListItem[];
   filterable?: boolean;
-  showcaseCardId?: string;
 }) {
   const {category} = useWritingFilter();
   const reduceMotion = useReducedMotion();
@@ -101,7 +91,7 @@ export function WritingList({
       <ul className="flex w-full flex-col gap-6">
         {visible.map((post) => (
           <li key={post._id}>
-            <WritingListItem post={post} showcaseCardId={showcaseCardId} />
+            <WritingListItem post={post} />
           </li>
         ))}
       </ul>
@@ -149,7 +139,7 @@ export function WritingList({
               transition={itemTransition}
               className="origin-center"
             >
-              <WritingListItem post={post} showcaseCardId={showcaseCardId} />
+              <WritingListItem post={post} />
             </motion.li>
           ))
         )}

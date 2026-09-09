@@ -1,5 +1,6 @@
 "use client";
 
+import {useShowcaseReturn} from "@/components/route-history";
 import { HoverFadeOverlay } from "@/components/hover-fade-overlay";
 import { appearScale, scaleOut, snappySpring } from "@/lib/motion";
 import {
@@ -21,6 +22,7 @@ import {
 import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import Image, { getImageProps } from "next/image";
 import Link from "next/link";
+import {useRouter} from "next/navigation";
 import {
   memo,
   useCallback,
@@ -101,6 +103,16 @@ function formatScreenshotDate(date: ScreenshotItem["date"]) {
   if (typeof month !== "number" || typeof year !== "number") return null;
   const label = MONTH_LABELS[month - 1];
   return label ? `${label} ${year}` : null;
+}
+
+function screenshotWritingLink(item: ScreenshotItem) {
+  const slug = item.linkedSlug?.trim();
+  const text = item.linkedSlugText?.trim();
+  if (!slug || !text) return null;
+  return {
+    href: `/writing/${slug}`,
+    text,
+  };
 }
 
 type LayoutOpts = {
@@ -342,6 +354,7 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
   trackRef,
   cardRefs,
   onSelect,
+  onHoverCard,
 }: {
   loopItems: Array<{ item: ScreenshotItem; copy: number }>;
   layoutOpts: LayoutOpts;
@@ -350,6 +363,7 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
   trackRef: RefObject<HTMLDivElement | null>;
   cardRefs: RefObject<Array<HTMLDivElement | null>>;
   onSelect: (id: string) => void;
+  onHoverCard: (id: string | null) => void;
 }) {
   return (
     <div
@@ -359,17 +373,33 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
     >
       {loopItems.map(({ item, copy }, loopIndex) => {
         const size = itemSize(item, layoutOpts);
+        const writingLink = screenshotWritingLink(item);
 
         return (
           <button
             key={`${item._id}-${copy}`}
             type="button"
             data-id={item._id}
-            aria-label={item.title}
+            data-linked={writingLink ? "true" : undefined}
+            aria-label={
+              writingLink ? `${item.title}, ${writingLink.text}` : item.title
+            }
             className={`showcase-card-slot relative shrink-0 bg-transparent p-0 ${
               ZOOM_ENABLED ? "data-[current=true]:cursor-zoom-in" : ""
+            } ${
+              writingLink
+                ? "data-[current=true]:cursor-pointer"
+                : ""
             }`}
             style={{ height: size.height, width: size.width }}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "touch") return;
+              onHoverCard(item._id);
+            }}
+            onPointerLeave={(event) => {
+              if (event.pointerType === "touch") return;
+              onHoverCard(null);
+            }}
             onClick={(event) => {
               if (event.detail !== 0) return;
               onSelect(item._id);
@@ -401,11 +431,14 @@ export function ShowcaseCarousel({
   initialActiveId?: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
+  const {rememberShowcaseCard, takeShowcaseCard} = useShowcaseReturn();
   const md = useIsMd();
   const requestedActiveId = items.some((item) => item._id === initialActiveId)
     ? initialActiveId
     : items[0]?._id;
   const [activeId, setActiveId] = useState(requestedActiveId ?? null);
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [zoomedItem, setZoomedItem] = useState<ScreenshotItem | null>(null);
   const canPortal = useSyncExternalStore(
@@ -425,7 +458,13 @@ export function ShowcaseCarousel({
   const snapTimerRef = useRef<number | null>(null);
   const snapAnimationRef = useRef<ReturnType<typeof animate> | null>(null);
   const dragMovedRef = useRef(0);
-  const pointerRef = useRef<{ id: number; lastX: number } | null>(null);
+  const pointerRef = useRef<{
+    id: number;
+    lastX: number;
+    startX: number;
+    startY: number;
+    axis: "pending" | "x" | "ignored";
+  } | null>(null);
   const velocitySamplesRef = useRef<Array<{ t: number; x: number }>>([]);
   const touchPointsRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchStartRef = useRef<number | null>(null);
@@ -615,9 +654,14 @@ export function ShowcaseCarousel({
     const viewCenter = containerWidth / 2;
     if (!initializedRef.current) {
       initializedRef.current = true;
+      const storedId = takeShowcaseCard();
+      const startId =
+        storedId && items.some((item) => item._id === storedId)
+          ? storedId
+          : requestedActiveId;
       const initialIndex = Math.max(
         0,
-        items.findIndex((item) => item._id === requestedActiveId),
+        items.findIndex((item) => item._id === startId),
       );
       x.set(
         -setWidth +
@@ -659,6 +703,7 @@ export function ShowcaseCarousel({
     items,
     layout,
     requestedActiveId,
+    takeShowcaseCard,
     x,
   ]);
 
@@ -764,6 +809,15 @@ export function ShowcaseCarousel({
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
       if (zoomedRef.current) return;
+      // On mobile, swallow vertical wheel/trackpad so it neither scrolls
+      // the page nor drives the carousel.
+      if (
+        !layoutOptsRef.current.md &&
+        Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+      ) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       interruptSnap();
       x.set(x.get() - wheelDelta(event));
@@ -779,6 +833,25 @@ export function ShowcaseCarousel({
       snapAnimationRef.current?.stop();
     };
   }, [applyTransforms, interruptSnap, scheduleSnap, x]);
+
+  useEffect(() => {
+    if (md) return;
+
+    const html = document.documentElement;
+    window.scrollTo({top: 0, left: 0, behavior: "auto"});
+    html.classList.add("showcase-noscroll");
+    const preventTouchScroll = (event: TouchEvent) => {
+      event.preventDefault();
+    };
+    document.addEventListener("touchmove", preventTouchScroll, {
+      passive: false,
+    });
+
+    return () => {
+      html.classList.remove("showcase-noscroll");
+      document.removeEventListener("touchmove", preventTouchScroll);
+    };
+  }, [md]);
 
   const snapTo = useCallback(
     (indexInSet: number) => {
@@ -814,9 +887,15 @@ export function ShowcaseCarousel({
   const onSelect = useCallback(
     (id: string) => {
       if (id === activeIdRef.current) {
-        if (!ZOOM_ENABLED) return;
         const item =
           itemsRef.current.find((entry) => entry._id === id) ?? null;
+        const writingLink = item ? screenshotWritingLink(item) : null;
+        if (writingLink) {
+          rememberShowcaseCard(id);
+          router.push(writingLink.href, {scroll: false});
+          return;
+        }
+        if (!ZOOM_ENABLED) return;
         if (item?.image?.asset || item?.video?.asset?.url) {
           setZoomedItem(item);
         }
@@ -826,8 +905,12 @@ export function ShowcaseCarousel({
       const index = itemsRef.current.findIndex((item) => item._id === id);
       if (index >= 0) snapTo(index);
     },
-    [snapTo],
+    [rememberShowcaseCard, router, snapTo],
   );
+
+  const onHoverCard = useCallback((id: string | null) => {
+    setHoveredCardId(id);
+  }, []);
 
   const closeZoom = useCallback(() => {
     setZoomedItem(null);
@@ -892,7 +975,13 @@ export function ShowcaseCarousel({
     interruptSnap();
     draggingRef.current = false;
     dragMovedRef.current = 0;
-    pointerRef.current = { id: event.pointerId, lastX: event.clientX };
+    pointerRef.current = {
+      id: event.pointerId,
+      lastX: event.clientX,
+      startX: event.clientX,
+      startY: event.clientY,
+      axis: layoutOptsRef.current.md ? "x" : "pending",
+    };
     velocitySamplesRef.current = [
       { t: performance.now(), x: event.clientX },
     ];
@@ -923,8 +1012,22 @@ export function ShowcaseCarousel({
     }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
+    if (pointer.axis === "ignored") return;
+
     const dx = event.clientX - pointer.lastX;
     pointer.lastX = event.clientX;
+
+    if (pointer.axis === "pending") {
+      const totalDx = event.clientX - pointer.startX;
+      const totalDy = event.clientY - pointer.startY;
+      if (Math.hypot(totalDx, totalDy) <= DRAG_CLICK_THRESHOLD) return;
+      if (Math.abs(totalDy) >= Math.abs(totalDx)) {
+        pointer.axis = "ignored";
+        return;
+      }
+      pointer.axis = "x";
+    }
+
     dragMovedRef.current += Math.abs(dx);
     const now = performance.now();
     const samples = velocitySamplesRef.current;
@@ -934,6 +1037,7 @@ export function ShowcaseCarousel({
     }
     if (!draggingRef.current && dragMovedRef.current > DRAG_CLICK_THRESHOLD) {
       draggingRef.current = true;
+      setHoveredCardId(null);
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     if (draggingRef.current) {
@@ -967,11 +1071,16 @@ export function ShowcaseCarousel({
     }
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
+    const ignored = pointer.axis === "ignored";
     const dragged = draggingRef.current;
     pointerRef.current = null;
     draggingRef.current = false;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (ignored) {
+      velocitySamplesRef.current = [];
+      return;
     }
     if (event.type === "pointercancel") {
       velocitySamplesRef.current = [];
@@ -1021,6 +1130,7 @@ export function ShowcaseCarousel({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onPointerLeave={() => setHoveredCardId(null)}
       >
         {/* The hard clip lives here (not on .showcase-carousel) so the edge
             blur strips can overhang the clip line; see .showcase-edge-blur. */}
@@ -1036,6 +1146,7 @@ export function ShowcaseCarousel({
             trackRef={trackRef}
             cardRefs={cardRefs}
             onSelect={onSelect}
+            onHoverCard={onHoverCard}
           />
         </div>
         <div
@@ -1058,7 +1169,10 @@ export function ShowcaseCarousel({
               exit={{ opacity: 0, y: 6 }}
               transition={snappySpring}
             >
-              <ShowcaseCaption item={active} />
+              <ShowcaseCaption
+                item={active}
+                linkHover={hoveredCardId === active._id}
+              />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -1902,23 +2016,18 @@ function ShowcaseCaption({
   titleId,
   descriptionId,
   layout = "carousel",
+  linkHover = false,
 }: {
   item: ScreenshotItem;
   titleId?: string;
   descriptionId?: string;
   layout?: "carousel" | "overlay";
+  linkHover?: boolean;
 }) {
+  const {rememberShowcaseCard} = useShowcaseReturn();
   const dateLabel = formatScreenshotDate(item.date);
   const overlay = layout === "overlay";
-  const linkedSlug = item.linkedSlug?.trim();
-  const linkedSlugText = item.linkedSlugText?.trim();
-  const writingHref =
-    linkedSlug && linkedSlugText
-      ? {
-          pathname: `/writing/${linkedSlug}`,
-          query: {card: item._id},
-        }
-      : null;
+  const writingLink = screenshotWritingLink(item);
 
   return (
     <div
@@ -1947,24 +2056,30 @@ function ShowcaseCaption({
           {item.description}
         </p>
       ) : null}
-      {writingHref && linkedSlugText ? (
+      {writingLink ? (
         <MotionLink
-          href={writingHref}
+          href={writingLink.href}
+          scroll={false}
           className={`group relative inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued ${
             overlay ? "md:self-start" : ""
-          }`}
+          } ${linkHover ? "is-hovered" : ""}`}
           initial="rest"
-          animate="rest"
+          animate={linkHover ? "hover" : "rest"}
           whileHover="hover"
           onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            rememberShowcaseCard(item._id);
+          }}
         >
-          {linkedSlugText}
+          {writingLink.text}
           {/* Safari ignores the individual `translate` property on SVG
               elements, so use the full `transform` property instead of
               Tailwind's translate-x utility. */}
           <ChevronRightIcon
-            className="size-3.5 transition-transform duration-300 ease-out group-hover:[transform:translateX(2px)]"
+            className={`size-3.5 transition-transform duration-300 ease-out group-hover:[transform:translateX(2px)] ${
+              linkHover ? "[transform:translateX(2px)]" : ""
+            }`}
             aria-hidden
           />
           <HoverFadeOverlay />

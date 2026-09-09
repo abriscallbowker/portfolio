@@ -34,7 +34,7 @@ export function NotFoundContent() {
       }
       if (event.key.toLowerCase() !== "h") return;
       event.preventDefault();
-      router.push("/");
+      router.push("/", {scroll: false});
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -70,6 +70,7 @@ export function NotFoundContent() {
       </p>
       <MotionLink
         href="/"
+        scroll={false}
         className="inline-flex items-center gap-1.5 text-body-sm text-subdued"
         whileHover={{scale: 1.03}}
         whileTap={{scale: 0.97}}

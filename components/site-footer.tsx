@@ -144,7 +144,7 @@ export function HomeFooter() {
 
 export function SiteFooter() {
   const pathname = usePathname();
-  const isHome = pathname === "/";
+  const isAbout = pathname === "/about";
   const isWriting = pathname === "/writing";
   const [revealed, setRevealed] = useState(false);
 
@@ -223,7 +223,7 @@ export function SiteFooter() {
 
   // About renders HomeFooter inside PageFade so it slides with the page.
   // Writing has no site footer.
-  if (isHome || isWriting) {
+  if (isAbout || isWriting) {
     return null;
   }
 

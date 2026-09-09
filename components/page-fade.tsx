@@ -6,7 +6,7 @@ import {appearFade, tabSlide} from "@/lib/motion";
 import {LayoutRouterContext} from "next/dist/shared/lib/app-router-context.shared-runtime";
 import {AnimatePresence, motion} from "motion/react";
 import {usePathname, useSelectedLayoutSegment} from "next/navigation";
-import {useContext, useEffect, useRef, useState, type ReactNode} from "react";
+import {useContext, useRef, useState, type ReactNode} from "react";
 
 const tabSlideVariants = {
   enter: (direction: number) => ({opacity: 0, x: 32 * direction}),
@@ -31,7 +31,7 @@ const showcaseSlideVariants = {
 
 function tabIndex(segment: string | null) {
   if (segment === "writing") return 1;
-  if (segment === "showcase") return 2;
+  if (segment === "about") return 2;
   return 0;
 }
 
@@ -52,7 +52,7 @@ export function SiteEnter({children}: {children: ReactNode}) {
   const {played} = useGreetingReveal();
   const [skipIntro] = useState(played);
   const pathname = usePathname();
-  const fillViewport = pathname !== "/";
+  const fillViewport = pathname !== "/about";
 
   return (
     <div className={fillViewport ? "flex min-h-full flex-col" : "flex flex-col"}>
@@ -84,10 +84,6 @@ export function PageFade({children}: {children: ReactNode}) {
 
   const direction = directionRef.current;
 
-  useEffect(() => {
-    window.scrollTo({top: 0, left: 0, behavior: "auto"});
-  }, [segment]);
-
   return (
     <motion.div
       className="w-full"
@@ -99,10 +95,10 @@ export function PageFade({children}: {children: ReactNode}) {
       <div className="grid w-full grid-cols-1 grid-rows-1 overflow-x-clip">
         <AnimatePresence custom={direction} mode="sync" initial={false}>
           <motion.div
-            key={segment ?? "about"}
+            key={segment ?? "showcase"}
             className="col-start-1 row-start-1 w-full"
             custom={direction}
-            variants={segment === "showcase" ? showcaseSlideVariants : tabSlideVariants}
+            variants={!segment ? showcaseSlideVariants : tabSlideVariants}
             initial="enter"
             animate="center"
             exit="exit"

@@ -7,9 +7,9 @@ import {usePathname} from "next/navigation";
 import {useCallback, useLayoutEffect, useRef, useState} from "react";
 
 const tabs = [
-  {href: "/", label: "About"},
+  {href: "/", label: "Showcase"},
   {href: "/writing", label: "Writing"},
-  {href: "/showcase", label: "Showcase"},
+  {href: "/about", label: "About"},
 ] as const;
 
 const HOVER_GROW = 0.28;
@@ -91,7 +91,7 @@ export function PageTabs() {
               tabRefs.current[index] = el;
             }}
             href={tab.href}
-            scroll
+            scroll={false}
             aria-current={isActive ? "page" : undefined}
             className={`relative pb-2 text-body-md ${
               isActive ? "text-ink" : "text-subdued hover:text-ink"

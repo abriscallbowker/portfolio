@@ -1,15 +1,21 @@
-import {AboutBio} from "@/components/about-bio";
-import {HomeFooter} from "@/components/site-footer";
-import {preloadGalleryImages} from "@/lib/preload-gallery-images";
+import {ShowcaseCarousel} from "@/components/showcase-carousel";
+import {preloadAboutImages} from "@/lib/preload-about-images";
+import {sanityFetch} from "@/sanity/lib/live";
+import {SCREENSHOTS_QUERY} from "@/sanity/lib/queries";
+import type {ScreenshotItem} from "@/sanity/lib/types";
 
-export default async function Home() {
-  await preloadGalleryImages();
+export default async function ShowcasePage() {
+  preloadAboutImages();
+  const {data} = await sanityFetch({
+    query: SCREENSHOTS_QUERY,
+    stega: false,
+  });
+
   return (
-    <>
-      <div className="site-column flex w-full flex-col gap-10">
-        <AboutBio />
-      </div>
-      <HomeFooter />
-    </>
+    <div className="w-full">
+      <ShowcaseCarousel
+        items={(data as ScreenshotItem[] | null) ?? []}
+      />
+    </div>
   );
 }

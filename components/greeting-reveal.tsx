@@ -25,7 +25,7 @@ const GreetingRevealContext = createContext<GreetingRevealContextValue>({
 });
 
 function isSitePath(pathname: string) {
-  return pathname === "/" || pathname === "/writing" || pathname === "/showcase";
+  return pathname === "/" || pathname === "/writing" || pathname === "/about";
 }
 
 export function GreetingRevealProvider({children}: {children: ReactNode}) {

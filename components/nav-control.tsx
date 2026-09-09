@@ -1,6 +1,10 @@
 "use client";
 
-import {usePreviousPathname} from "@/components/route-history";
+import {
+  isShowcasePath,
+  usePreviousPathname,
+  useShowcaseReturn,
+} from "@/components/route-history";
 import {HomeIcon, TabBar} from "@/components/tab-bar";
 import {useRouter} from "next/navigation";
 import {useEffect, useState} from "react";
@@ -25,13 +29,15 @@ export function NavControl({
 }: NavControlProps) {
   const router = useRouter();
   const previousPathname = usePreviousPathname();
+  const {returnCardId} = useShowcaseReturn();
   // Send the home button back to the showcase when that's where the
   // visitor came from, so it acts as a "return" rather than a reset.
-  const cameFromShowcase = icon === "home" && previousPathname === "/showcase";
-  const showcaseHref = defaultHref.startsWith("/showcase")
-    ? defaultHref
-    : "/showcase";
-  const href = cameFromShowcase ? showcaseHref : defaultHref;
+  // A stored card id (from clicking a showcase card) also counts, so the
+  // first back tap still restores that card after a refresh.
+  const cameFromShowcase =
+    icon === "home" &&
+    (isShowcasePath(previousPathname) || Boolean(returnCardId));
+  const href = cameFromShowcase ? "/" : defaultHref;
   const label = cameFromShowcase ? "Back to showcase" : defaultLabel;
   const shortcut = shortcutForIcon[icon];
   const [scrolled, setScrolled] = useState(false);
@@ -62,7 +68,7 @@ export function NavControl({
       if (!pressed) return;
 
       event.preventDefault();
-      router.push(href);
+      router.push(href, {scroll: false});
     };
 
     window.addEventListener("keydown", onKeyDown);

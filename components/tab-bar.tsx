@@ -24,6 +24,7 @@ export function TabBar({
   return (
     <MotionLink
       href={href}
+      scroll={false}
       aria-label={ariaLabel}
       className={["tab-bar", "origin-center", className].filter(Boolean).join(" ")}
       initial={{scale: 0.5}}
