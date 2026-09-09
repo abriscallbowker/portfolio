@@ -7,7 +7,12 @@ import {
 } from "@/components/route-history";
 import {HomeIcon, TabBar} from "@/components/tab-bar";
 import {useRouter} from "next/navigation";
-import {useEffect, useState} from "react";
+import {useEffect, useState, useSyncExternalStore} from "react";
+import {createPortal} from "react-dom";
+
+const subscribeToClient = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 type NavControlProps = {
   href: string;
@@ -28,6 +33,7 @@ export function NavControl({
   icon,
 }: NavControlProps) {
   const router = useRouter();
+  const mounted = useSyncExternalStore(subscribeToClient, clientSnapshot, serverSnapshot);
   const previousPathname = usePreviousPathname();
   const {returnCardId} = useShowcaseReturn();
   // Send the home button back to the showcase when that's where the
@@ -75,14 +81,17 @@ export function NavControl({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [href, router, shortcut]);
 
-  return (
-    <TabBar
-      href={href}
-      aria-label={label}
-      className={scrolled ? "home-button is-scrolled" : "home-button"}
-    >
-      {icon === "info" ? <InfoIcon /> : icon === "close" ? <CloseIcon /> : <HomeIcon />}
-    </TabBar>
+  // Keep viewport positioning outside the article and its animation layers.
+  // Only the inner link scales; the fixed shell keeps a stable compositor layer.
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className={scrolled ? "home-button-shell is-scrolled" : "home-button-shell"}>
+      <TabBar href={href} aria-label={label} className="home-button">
+        {icon === "info" ? <InfoIcon /> : icon === "close" ? <CloseIcon /> : <HomeIcon />}
+      </TabBar>
+    </div>,
+    document.body,
   );
 }
 

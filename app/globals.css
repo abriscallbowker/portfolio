@@ -208,24 +208,30 @@ body {
     0 5px 5px rgb(0 0 0 / 0.06);
 }
 
-.home-button {
+.home-button-shell {
   position: fixed;
   top: 48px;
   left: 48px;
   z-index: 50;
+  width: 48px;
+  height: 48px;
+  transform: translateZ(0);
+}
+
+.home-button {
   background: #ffffff;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 @media (max-width: 809px) {
-  .home-button {
-    top: 16px;
+  .home-button-shell {
+    top: calc(16px + env(safe-area-inset-top, 0px));
     left: 16px;
     transition: left 0.2s ease;
   }
 
-  .home-button.is-scrolled {
+  .home-button-shell.is-scrolled {
     left: 24px;
   }
 }
