@@ -128,7 +128,7 @@ type CardSize = {
 };
 
 function idealHeight(md: boolean) {
-  return md ? 440 : 380;
+  return md ? 440 : 240;
 }
 
 function cardGap(md: boolean) {
