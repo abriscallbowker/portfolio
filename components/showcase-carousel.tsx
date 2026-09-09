@@ -313,11 +313,17 @@ function useCarouselBudget(
     const section = sectionRef.current;
     if (!enabled || !section) return;
 
+    let measuredWidth: number | null = null;
     const update = () => {
+      const width = document.documentElement.clientWidth;
+      // Mobile browser chrome changes viewport height while scrolling.
+      // Keep the initial card budget until the layout width changes.
+      if (!md && measuredWidth === width) return;
+      measuredWidth = width;
       const vv = window.visualViewport;
       const viewportBottom =
         (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight);
-      const top = section.getBoundingClientRect().top;
+      const top = section.getBoundingClientRect().top + (md ? 0 : window.scrollY);
       const available =
         viewportBottom - top - CAPTION_RESERVE - bottomClearance(md);
       const next = Math.max(
@@ -809,18 +815,20 @@ export function ShowcaseCarousel({
   useEffect(() => {
     const onWheel = (event: WheelEvent) => {
       if (zoomedRef.current) return;
-      // On mobile, swallow vertical wheel/trackpad so it neither scrolls
-      // the page nor drives the carousel.
+      // Let mobile vertical wheel gestures scroll the page without
+      // driving the carousel.
       if (
         !layoutOptsRef.current.md &&
         Math.abs(event.deltaY) >= Math.abs(event.deltaX)
       ) {
-        event.preventDefault();
         return;
       }
       event.preventDefault();
       interruptSnap();
-      x.set(x.get() - wheelDelta(event));
+      const delta = layoutOptsRef.current.md
+        ? wheelDelta(event)
+        : event.deltaX * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerWidth : 1);
+      x.set(x.get() - delta);
       applyTransforms();
       scheduleSnap();
     };
@@ -833,25 +841,6 @@ export function ShowcaseCarousel({
       snapAnimationRef.current?.stop();
     };
   }, [applyTransforms, interruptSnap, scheduleSnap, x]);
-
-  useEffect(() => {
-    if (md) return;
-
-    const html = document.documentElement;
-    window.scrollTo({top: 0, left: 0, behavior: "auto"});
-    html.classList.add("showcase-noscroll");
-    const preventTouchScroll = (event: TouchEvent) => {
-      event.preventDefault();
-    };
-    document.addEventListener("touchmove", preventTouchScroll, {
-      passive: false,
-    });
-
-    return () => {
-      html.classList.remove("showcase-noscroll");
-      document.removeEventListener("touchmove", preventTouchScroll);
-    };
-  }, [md]);
 
   const snapTo = useCallback(
     (indexInSet: number) => {
@@ -1124,7 +1113,7 @@ export function ShowcaseCarousel({
         className="showcase-carousel relative mx-auto w-full cursor-grab select-none active:cursor-grabbing"
         style={{
           height: trackHeight + DEPTH_PAD,
-          touchAction: "none",
+          touchAction: md ? "none" : "pan-y",
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

@@ -146,6 +146,8 @@ export function SiteFooter() {
   const pathname = usePathname();
   const isAbout = pathname === "/about";
   const isWriting = pathname === "/writing";
+  const isShowcase = pathname === "/" || pathname === "/showcase";
+  const hideFooter = isAbout || isWriting || isShowcase;
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -153,6 +155,8 @@ export function SiteFooter() {
   }, [pathname]);
 
   useEffect(() => {
+    if (hideFooter) return;
+
     let touchY = 0;
 
     const onWheel = (event: WheelEvent) => {
@@ -219,11 +223,11 @@ export function SiteFooter() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [hideFooter]);
 
   // About renders HomeFooter inside PageFade so it slides with the page.
-  // Writing has no site footer.
-  if (isAbout || isWriting) {
+  // Writing and showcase have no site footer.
+  if (hideFooter) {
     return null;
   }
 

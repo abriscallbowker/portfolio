@@ -33,15 +33,6 @@ body {
   color: var(--ink);
 }
 
-/* Mobile showcase: the carousel owns horizontal pans; vertical page
-   scroll (including iOS rubber-banding) is locked so it never registers. */
-html.showcase-noscroll,
-html.showcase-noscroll body {
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: none;
-}
-
 ::selection {
   background: #e5e5e5;
   color: var(--ink);
