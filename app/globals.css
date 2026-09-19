@@ -257,6 +257,13 @@ body {
   bottom: 0;
 }
 
+/* About HomeFooter is z-40 inside a z-25 page context; drop the bottom
+   glass below that so the coords/timer stay sharp. Other routes keep
+   z-30 so scrolling work still tucks under the overlay. */
+body:has(.about-footer) .progressive-blur-wrap--bottom {
+  z-index: 10;
+}
+
 .progressive-blur {
   position: relative;
   width: 100%;

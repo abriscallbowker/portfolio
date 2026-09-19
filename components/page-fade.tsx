@@ -52,10 +52,20 @@ export function SiteEnter({children}: {children: ReactNode}) {
   const {played} = useGreetingReveal();
   const [skipIntro] = useState(played);
   const pathname = usePathname();
-  const fillViewport = pathname !== "/about";
+  const isAbout = pathname === "/about";
+  const fillViewport = !isAbout;
 
   return (
-    <div className={fillViewport ? "flex min-h-full flex-col" : "flex flex-col"}>
+    <div
+      className={
+        fillViewport
+          ? "flex min-h-full flex-col"
+          : // Between the bottom glass (z-10 on about) and the top glass
+            // (z-30), so HomeFooter can sit above the blur without lifting
+            // the greeting/headshot over the top overlay.
+            "relative z-[25] flex flex-col"
+      }
+    >
       <AppearFade
         delay={0}
         instant={!skipIntro}
