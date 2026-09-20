@@ -198,7 +198,7 @@ export function CategoryFilter() {
             id={listId}
             role="listbox"
             aria-label="Category"
-            className="absolute left-0 z-20 w-max overflow-hidden rounded-2xl border border-border bg-background p-1.5 shadow-[0_0.3px_0.3px_rgb(0_0_0/0.18),0_1.14px_1.14px_rgb(0_0_0/0.16),0_5px_5px_rgb(0_0_0/0.06)]"
+            className="absolute left-0 z-50 w-max overflow-hidden rounded-2xl border border-border bg-background p-1.5 shadow-[0_0.3px_0.3px_rgb(0_0_0/0.18),0_1.14px_1.14px_rgb(0_0_0/0.16),0_5px_5px_rgb(0_0_0/0.06)]"
             style={{top: menuTop, transformOrigin: `left ${originY}px`}}
             initial={instant ? false : {scale: 0.5, opacity: 0}}
             animate={{scale: 1, opacity: 1}}
