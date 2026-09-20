@@ -78,6 +78,7 @@ export function PageTabs() {
     <nav
       ref={navRef}
       aria-label="Sections"
+      data-carousel-anchor
       className="relative flex gap-6"
       onMouseLeave={() => setHoveredHref(null)}
     >

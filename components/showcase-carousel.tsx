@@ -302,12 +302,18 @@ function useIsMd() {
   );
 }
 
+// Remember the last desktop card height across remounts so Writing →
+// Showcase doesn't paint one frame at idealHeight (440) then shrink.
+let lastMdCardHeight: number | null = null;
+
 function useCarouselBudget(
   md: boolean,
   enabled: boolean,
   sectionRef: RefObject<HTMLElement | null>,
 ) {
-  const [maxCardHeight, setMaxCardHeight] = useState(() => idealHeight(md));
+  const [maxCardHeight, setMaxCardHeight] = useState(() =>
+    md && lastMdCardHeight != null ? lastMdCardHeight : idealHeight(md),
+  );
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -318,21 +324,39 @@ function useCarouselBudget(
       // Visual viewport offsets (scrolling / zoom / browser chrome) must not
       // affect the dimensions of the carousel's layout.
       const viewportBottom = document.documentElement.clientHeight;
-      const top = section.getBoundingClientRect().top + window.scrollY;
+      // Measure from the tabs, not the carousel section. The writing
+      // filter sits between them and animates height on tab changes, so
+      // using the section's current top would bake that leftover space
+      // into the card size.
+      const anchor = document.querySelector("[data-carousel-anchor]");
+      const main = section.closest("main");
+      const gap = main
+        ? Number.parseFloat(
+            getComputedStyle(main).rowGap || getComputedStyle(main).gap,
+          ) || 0
+        : 0;
+      const top = anchor
+        ? anchor.getBoundingClientRect().bottom + window.scrollY + gap
+        : section.getBoundingClientRect().top + window.scrollY;
       const available =
         viewportBottom - top - CAPTION_RESERVE - bottomClearance(md);
       const next = Math.max(
         MIN_CARD_HEIGHT,
         Math.min(idealHeight(md), available - DEPTH_PAD),
       );
+      lastMdCardHeight = next;
       setMaxCardHeight((prev) => (Math.abs(prev - next) < 0.5 ? prev : next));
     };
 
     update();
     const viewport = window.visualViewport;
+    const header = document.querySelector("[data-site-header]");
+    const observer = header ? new ResizeObserver(update) : null;
+    if (header) observer?.observe(header);
     window.addEventListener("resize", update);
     viewport?.addEventListener("resize", update);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", update);
       viewport?.removeEventListener("resize", update);
     };

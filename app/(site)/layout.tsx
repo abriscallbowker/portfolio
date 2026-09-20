@@ -12,7 +12,7 @@ export default function SiteLayout({children}: {children: ReactNode}) {
           {/* Positioned above the page content so the category menu isn't
               trapped under it while ancestor fades create stacking
               contexts. */}
-          <div className="relative z-20 w-full">
+          <div className="relative z-20 w-full" data-site-header>
             <ProfileIntro showTabs />
           </div>
           <PageFade>{children}</PageFade>

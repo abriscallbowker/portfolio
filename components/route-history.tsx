@@ -33,6 +33,11 @@ function firstSegment(pathname: string) {
   return pathname.split("/")[1] ?? "";
 }
 
+function isArticlePath(pathname: string) {
+  const segment = firstSegment(pathname);
+  return Boolean(segment) && pathname !== `/${segment}` && pathname !== `/${segment}/`;
+}
+
 function readStoredCardId() {
   try {
     return sessionStorage.getItem(SHOWCASE_CARD_KEY);
@@ -113,15 +118,17 @@ export function RouteHistoryProvider({children}: {children: ReactNode}) {
   }, []);
 
   if (historyRef.current.current !== pathname) {
-    // Moving between pages of the same section (e.g. article to article
-    // via the More list) keeps `previous` pointing at where the visitor
-    // entered the section from.
-    const sameSection =
-      firstSegment(pathname) !== "" &&
+    // Article → article (the More list) keeps `previous` pointing at
+    // where the visitor entered the section, so home can still return
+    // to showcase. Writing list → article is a new step, so home can
+    // return to the writing tab.
+    const articleToArticle =
+      isArticlePath(historyRef.current.current) &&
+      isArticlePath(pathname) &&
       firstSegment(historyRef.current.current) === firstSegment(pathname);
     historyRef.current = {
       current: pathname,
-      previous: sameSection
+      previous: articleToArticle
         ? historyRef.current.previous
         : historyRef.current.current,
     };
@@ -184,4 +191,8 @@ export function useShowcaseReturn() {
 
 export function isShowcasePath(pathname: string | null) {
   return pathname === "/" || pathname === "/showcase";
+}
+
+export function isWritingListPath(pathname: string | null) {
+  return pathname === "/writing";
 }

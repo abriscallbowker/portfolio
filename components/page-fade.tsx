@@ -11,17 +11,21 @@ import {useContext, useRef, useState, type ReactNode} from "react";
 const tabSlideVariants = {
   enter: (direction: number) => ({opacity: 0, x: 32 * direction}),
   center: {opacity: 1, x: 0},
+  // Stay above the incoming page so text slides off the gallery
+  // instead of the cards flashing over the list.
   exit: (direction: number) => ({
     opacity: 0,
     x: -32 * direction,
     pointerEvents: "none" as const,
+    zIndex: 1,
   }),
 };
 
-// The showcase imagery reads as clutter when it lingers over incoming
-// text-heavy tabs, so it fades out near-instantly instead of sliding.
+// Gallery sits still when revealed. It still fades out immediately when
+// leaving so the imagery doesn't linger over incoming text tabs.
 const showcaseSlideVariants = {
-  ...tabSlideVariants,
+  enter: {opacity: 0, x: 0},
+  center: {opacity: 1, x: 0},
   exit: {
     opacity: 0,
     pointerEvents: "none" as const,
@@ -106,7 +110,7 @@ export function PageFade({children}: {children: ReactNode}) {
         <AnimatePresence custom={direction} mode="sync" initial={false}>
           <motion.div
             key={segment ?? "showcase"}
-            className="col-start-1 row-start-1 w-full"
+            className="relative col-start-1 row-start-1 w-full"
             custom={direction}
             variants={!segment ? showcaseSlideVariants : tabSlideVariants}
             initial="enter"

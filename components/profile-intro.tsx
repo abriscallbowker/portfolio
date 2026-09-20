@@ -14,8 +14,8 @@ import {useRef, useState} from "react";
 
 const tabOrder = ["/", "/writing", "/about"];
 
-// Matches PageFade's slide so the filter moves with the page content:
-// entering from a lower-index tab slides in from the right, and vice versa.
+// In-flow height so the writing list eases down to reveal the filter.
+// Same tabSlide timing as PageFade keeps the two motions in step.
 const filterSlideVariants = {
   enter: (direction: number) => ({height: 0, opacity: 0, x: 32 * direction}),
   center: {height: "auto", opacity: 1, x: 0},
@@ -75,6 +75,7 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
                   animate="center"
                   exit="exit"
                   transition={reduceMotion ? {duration: 0} : tabSlide}
+                  className="overflow-hidden"
                 >
                   <div className="pt-4">
                     <CategoryFilter />

@@ -2,6 +2,7 @@
 
 import {
   isShowcasePath,
+  isWritingListPath,
   usePreviousPathname,
   useShowcaseReturn,
 } from "@/components/route-history";
@@ -36,12 +37,14 @@ export function NavControl({
   const mounted = useSyncExternalStore(subscribeToClient, clientSnapshot, serverSnapshot);
   const previousPathname = usePreviousPathname();
   const {returnCardId} = useShowcaseReturn();
-  // Send the home button back to the showcase when that's where the
-  // visitor came from, so it acts as a "return" rather than a reset.
-  // A stored card id (from clicking a showcase card) also counts, so the
-  // first back tap still restores that card after a refresh.
+  // Home returns to the writing tab if that's where the article was
+  // opened from. Showcase wins only when the previous page was the
+  // gallery (or a card click stored a return id) and they did not come
+  // through the writing list.
+  const cameFromWriting = icon === "home" && isWritingListPath(previousPathname);
   const cameFromShowcase =
     icon === "home" &&
+    !cameFromWriting &&
     (isShowcasePath(previousPathname) || Boolean(returnCardId));
   const href = cameFromShowcase ? "/" : defaultHref;
   const label = cameFromShowcase ? "Back to showcase" : defaultLabel;
