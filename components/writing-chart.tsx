@@ -654,9 +654,7 @@ export function WritingChart() {
                     style={{background: SERIES_COLORS[series]}}
                   />
                 )}
-                {type === "pie"
-                  ? `${formatPercent(targetPercents[series])} ${SERIES_NAMES[series]}`
-                  : SERIES_NAMES[series]}
+                {type === "pie" ? PIE_SHARES[series] : SERIES_NAMES[series]}
               </li>
             ))}
           </ul>
