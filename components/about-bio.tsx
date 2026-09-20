@@ -12,7 +12,7 @@ export function AboutBio() {
             alt=""
             width={18}
             height={18}
-            className="ml-1 mr-1.5 size-[18px] shrink-0 rounded-[4px] object-cover"
+            className="ml-[4px] mr-1.5 size-[18px] shrink-0 rounded-[4px] object-cover"
           />
           Prax Industries.
         </p>
