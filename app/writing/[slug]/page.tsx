@@ -1,6 +1,7 @@
 import {AppearFade} from "@/components/appear";
 import {NavControl} from "@/components/nav-control";
 import {PortableBody} from "@/components/portable-body";
+import {WritingChart} from "@/components/writing-chart";
 import {WritingList} from "@/components/writing-list";
 import {formatArticleDate} from "@/lib/dates";
 import {site} from "@/lib/site";
@@ -90,6 +91,7 @@ export default async function WritingPage({
                 {article.title}
               </h1>
             </header>
+            {article.slug === "charts" ? <WritingChart /> : null}
             <PortableBody value={article.body} />
           </article>
           <section className="site-column mt-16 flex w-full flex-col gap-4">
