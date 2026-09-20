@@ -10,9 +10,9 @@ export function AboutBio() {
           <Image
             src="/icons/prax.webp"
             alt=""
-            width={20}
-            height={20}
-            className="ml-1 mr-1.5 inline-block size-5 rounded-[4px] align-middle object-cover"
+            width={18}
+            height={18}
+            className="ml-1 mr-1.5 inline-block size-[18px] rounded-[4px] align-middle object-cover"
           />
           Prax Industries.
         </p>
