@@ -7,14 +7,16 @@ export function AboutBio() {
       <div className="flex flex-col gap-5 px-4">
         <p>
           Product Designer at{" "}
-          <Image
-            src="/icons/prax.webp"
-            alt=""
-            width={18}
-            height={18}
-            className="ml-1 mr-1.5 inline-block size-[18px] rounded-[4px] align-middle object-cover"
-          />
-          Prax Industries.
+          <span className="ml-1 inline-flex items-center gap-1.5">
+            <Image
+              src="/icons/prax.webp"
+              alt=""
+              width={18}
+              height={18}
+              className="size-[18px] shrink-0 rounded-[4px] object-cover"
+            />
+            Prax Industries.
+          </span>
         </p>
         <p>Previously worked at Caura and JPMorgan.</p>
         <p>Also ran the product studio Visual Binary.</p>
