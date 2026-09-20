@@ -84,7 +84,17 @@ export function ProfileIntro({showTabs = false}: {showTabs?: boolean}) {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={reduceMotion ? {duration: 0} : tabSlide}
+                  transition={
+                    reduceMotion
+                      ? {duration: 0}
+                      : isWriting
+                        ? tabSlide
+                        : // Drop the filter out of flow as soon as we leave
+                          // Writing. Animating height closed here shoves the
+                          // incoming gallery (and, via Safari scroll
+                          // anchoring, the tabs) down for one settle.
+                          {...tabSlide, height: {duration: 0}}
+                  }
                   className="relative z-30"
                 >
                   <div className="pt-4">

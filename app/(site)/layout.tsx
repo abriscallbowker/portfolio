@@ -8,11 +8,11 @@ export default function SiteLayout({children}: {children: ReactNode}) {
   return (
     <WritingFilterProvider>
       <SiteEnter>
-        <main className="flex flex-1 flex-col items-center gap-6 pb-48 pt-16 sm:pt-24">
+        <main className="flex flex-1 flex-col items-center gap-6 pb-48 pt-16 sm:pt-24 [overflow-anchor:none]">
           {/* Positioned above the page content so the category menu isn't
               trapped under it while ancestor fades create stacking
               contexts. */}
-          <div className="relative z-40 w-full" data-site-header>
+          <div className="relative z-40 w-full [overflow-anchor:none]" data-site-header>
             <ProfileIntro showTabs />
           </div>
           <PageFade>{children}</PageFade>

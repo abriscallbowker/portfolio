@@ -12,12 +12,18 @@ const tabSlideVariants = {
   enter: (direction: number) => ({opacity: 0, x: 32 * direction}),
   center: {opacity: 1, x: 0},
   // Stay above the incoming page so text slides off the gallery
-  // instead of the cards flashing over the list.
+  // instead of the cards flashing over the list. Absolute so a tall
+  // exiting page (Writing) doesn't keep the grid row — and the
+  // document — oversized until the fade finishes.
   exit: (direction: number) => ({
     opacity: 0,
     x: -32 * direction,
     pointerEvents: "none" as const,
     zIndex: 1,
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    width: "100%",
   }),
 };
 
@@ -29,6 +35,10 @@ const showcaseSlideVariants = {
   exit: {
     opacity: 0,
     pointerEvents: "none" as const,
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    width: "100%",
     transition: {duration: 0.1, ease: "easeOut"} as const,
   },
 };
@@ -106,7 +116,7 @@ export function PageFade({children}: {children: ReactNode}) {
       transition={appearFade}
       style={{pointerEvents: ready ? undefined : "none"}}
     >
-      <div className="grid w-full grid-cols-1 grid-rows-1 overflow-x-clip">
+      <div className="relative grid w-full grid-cols-1 grid-rows-1 overflow-x-clip [overflow-anchor:none]">
         <AnimatePresence custom={direction} mode="sync" initial={false}>
           <motion.div
             key={segment ?? "showcase"}

@@ -296,6 +296,9 @@ function useIsMd() {
 // Remember the last desktop card height across remounts so Writing →
 // Showcase doesn't paint one frame at idealHeight (440) then shrink.
 let lastMdCardHeight: number | null = null;
+// Same idea for mobile laptop cards, whose width (and therefore height)
+// depends on a measured container width that is 0 on the first paint.
+let lastContainerWidth = 0;
 
 function useCarouselBudget(
   md: boolean,
@@ -445,7 +448,7 @@ export function ShowcaseCarousel({
     ? initialActiveId
     : items[0]?._id;
   const [activeId, setActiveId] = useState(requestedActiveId ?? null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(lastContainerWidth);
   const [zoomedItem, setZoomedItem] = useState<ScreenshotItem | null>(null);
   const canPortal = useSyncExternalStore(
     emptySubscribe,
@@ -530,7 +533,10 @@ export function ShowcaseCarousel({
     const el = containerRef.current;
     if (!el) return;
 
-    const update = () => setContainerWidth(el.clientWidth);
+    const update = () => {
+      lastContainerWidth = el.clientWidth;
+      setContainerWidth(el.clientWidth);
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);

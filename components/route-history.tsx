@@ -70,6 +70,13 @@ function ScrollToTop() {
     if (isShowcasePath(pathname)) {
       isFirstNavigation.current = false;
       const resetScroll = () => {
+        const top =
+          window.scrollY ||
+          document.documentElement.scrollTop ||
+          document.body.scrollTop;
+        // Calling scrollTo(0) while already at the top makes iOS Safari
+        // expand the URL bar and shift the visual viewport.
+        if (top <= 0) return;
         window.scrollTo({top: 0, left: 0, behavior: "instant"});
       };
       resetScroll();
