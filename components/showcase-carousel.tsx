@@ -1,7 +1,6 @@
 "use client";
 
 import {useShowcaseReturn} from "@/components/route-history";
-import { HoverFadeOverlay } from "@/components/hover-fade-overlay";
 import { appearScale, scaleOut, snappySpring } from "@/lib/motion";
 import {
   PHONE_ASPECT,
@@ -19,9 +18,7 @@ import {
   useReducedMotion,
   useTransform,
 } from "motion/react";
-import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import Image, { getImageProps } from "next/image";
-import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {
   memo,
@@ -36,8 +33,6 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-
-const MotionLink = motion.create(Link);
 
 // Zoom-in view is disabled on all devices/breakpoints. Flip this to true to
 // restore click/pinch-to-zoom and the fullscreen overlay.
@@ -107,12 +102,8 @@ function formatScreenshotDate(date: ScreenshotItem["date"]) {
 
 function screenshotWritingLink(item: ScreenshotItem) {
   const slug = item.linkedSlug?.trim();
-  const text = item.linkedSlugText?.trim();
-  if (!slug || !text) return null;
-  return {
-    href: `/writing/${slug}`,
-    text,
-  };
+  if (!slug) return null;
+  return {href: `/writing/${slug}`};
 }
 
 type LayoutOpts = {
@@ -382,7 +373,6 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
   trackRef,
   cardRefs,
   onSelect,
-  onHoverCard,
 }: {
   loopItems: Array<{ item: ScreenshotItem; copy: number }>;
   layoutOpts: LayoutOpts;
@@ -391,7 +381,6 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
   trackRef: RefObject<HTMLDivElement | null>;
   cardRefs: RefObject<Array<HTMLDivElement | null>>;
   onSelect: (id: string) => void;
-  onHoverCard: (id: string | null) => void;
 }) {
   return (
     <div
@@ -409,9 +398,7 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
             type="button"
             data-id={item._id}
             data-linked={writingLink ? "true" : undefined}
-            aria-label={
-              writingLink ? `${item.title}, ${writingLink.text}` : item.title
-            }
+            aria-label={item.title}
             className={`showcase-card-slot relative shrink-0 bg-transparent p-0 ${
               ZOOM_ENABLED ? "data-[current=true]:cursor-zoom-in" : ""
             } ${
@@ -420,14 +407,6 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
                 : ""
             }`}
             style={{ height: size.height, width: size.width }}
-            onPointerEnter={(event) => {
-              if (event.pointerType === "touch") return;
-              onHoverCard(item._id);
-            }}
-            onPointerLeave={(event) => {
-              if (event.pointerType === "touch") return;
-              onHoverCard(null);
-            }}
             onClick={(event) => {
               if (event.detail !== 0) return;
               onSelect(item._id);
@@ -466,7 +445,6 @@ export function ShowcaseCarousel({
     ? initialActiveId
     : items[0]?._id;
   const [activeId, setActiveId] = useState(requestedActiveId ?? null);
-  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [zoomedItem, setZoomedItem] = useState<ScreenshotItem | null>(null);
   const canPortal = useSyncExternalStore(
@@ -919,10 +897,6 @@ export function ShowcaseCarousel({
     [rememberShowcaseCard, router, snapTo],
   );
 
-  const onHoverCard = useCallback((id: string | null) => {
-    setHoveredCardId(id);
-  }, []);
-
   const closeZoom = useCallback(() => {
     setZoomedItem(null);
   }, []);
@@ -1048,7 +1022,6 @@ export function ShowcaseCarousel({
     }
     if (!draggingRef.current && dragMovedRef.current > DRAG_CLICK_THRESHOLD) {
       draggingRef.current = true;
-      setHoveredCardId(null);
       event.currentTarget.setPointerCapture(event.pointerId);
     }
     if (draggingRef.current) {
@@ -1141,7 +1114,6 @@ export function ShowcaseCarousel({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onPointerLeave={() => setHoveredCardId(null)}
       >
         {/* The hard clip lives here (not on .showcase-carousel) so the edge
             blur strips can overhang the clip line; see .showcase-edge-blur. */}
@@ -1157,7 +1129,6 @@ export function ShowcaseCarousel({
             trackRef={trackRef}
             cardRefs={cardRefs}
             onSelect={onSelect}
-            onHoverCard={onHoverCard}
           />
         </div>
         <div
@@ -1180,10 +1151,7 @@ export function ShowcaseCarousel({
               exit={{ opacity: 0, y: 6 }}
               transition={snappySpring}
             >
-              <ShowcaseCaption
-                item={active}
-                linkHover={hoveredCardId === active._id}
-              />
+              <ShowcaseCaption item={active} />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -2027,18 +1995,14 @@ function ShowcaseCaption({
   titleId,
   descriptionId,
   layout = "carousel",
-  linkHover = false,
 }: {
   item: ScreenshotItem;
   titleId?: string;
   descriptionId?: string;
   layout?: "carousel" | "overlay";
-  linkHover?: boolean;
 }) {
-  const {rememberShowcaseCard} = useShowcaseReturn();
   const dateLabel = formatScreenshotDate(item.date);
   const overlay = layout === "overlay";
-  const writingLink = screenshotWritingLink(item);
 
   return (
     <div
@@ -2066,35 +2030,6 @@ function ShowcaseCaption({
         <p id={descriptionId} className="text-body-sm text-subdued">
           {item.description}
         </p>
-      ) : null}
-      {writingLink ? (
-        <MotionLink
-          href={writingLink.href}
-          scroll={false}
-          className={`group relative inline-flex cursor-pointer items-center gap-px self-center text-body-sm text-subdued ${
-            overlay ? "md:self-start" : ""
-          } ${linkHover ? "is-hovered" : ""}`}
-          initial="rest"
-          animate={linkHover ? "hover" : "rest"}
-          whileHover="hover"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            rememberShowcaseCard(item._id);
-          }}
-        >
-          {writingLink.text}
-          {/* Safari ignores the individual `translate` property on SVG
-              elements, so use the full `transform` property instead of
-              Tailwind's translate-x utility. */}
-          <ChevronRightIcon
-            className={`size-3.5 transition-transform duration-300 ease-out group-hover:[transform:translateX(2px)] ${
-              linkHover ? "[transform:translateX(2px)]" : ""
-            }`}
-            aria-hidden
-          />
-          <HoverFadeOverlay />
-        </MotionLink>
       ) : null}
     </div>
   );
