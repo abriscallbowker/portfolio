@@ -130,9 +130,17 @@ function scatterX(categoryIndex: number, seriesIndex: number, seriesCount: numbe
   return categoryX(categoryIndex) + centered;
 }
 
-function barLayout(seriesCount: number) {
-  const width = (BAR_GROUP - BAR_GAP * (seriesCount - 1)) / seriesCount;
-  return {width, group: BAR_GROUP};
+function barWidth(count: number) {
+  const n = Math.max(count, 1);
+  return (BAR_GROUP - BAR_GAP * (n - 1)) / n;
+}
+
+function barX(category: number, series: number, count: number) {
+  return (
+    categoryX(category) -
+    BAR_GROUP / 2 +
+    series * (barWidth(count) + BAR_GAP)
+  );
 }
 
 function polar(cx: number, cy: number, radius: number, angle: number) {
@@ -201,6 +209,12 @@ function easeOut(progress: number) {
   return 1 - (1 - progress) ** 3;
 }
 
+function easeInOut(progress: number) {
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - ((-2 * progress + 2) ** 3) / 2;
+}
+
 function useTweenedScale(
   min: number,
   max: number,
@@ -246,6 +260,37 @@ function useTweenedScale(
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [min, max, breakSize, duration, reduced]);
+
+  return current;
+}
+
+function useTweenedNumber(target: number, duration: number) {
+  const reduced = useReducedMotion();
+  const [current, setCurrent] = useState(target);
+  const currentRef = useRef(target);
+
+  useEffect(() => {
+    if (reduced || currentRef.current === target) {
+      currentRef.current = target;
+      setCurrent(target);
+      return;
+    }
+
+    const from = currentRef.current;
+    const started = performance.now();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / duration);
+      const next = from + (target - from) * easeInOut(progress);
+      currentRef.current = next;
+      setCurrent(next);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, duration, reduced]);
 
   return current;
 }
@@ -405,6 +450,7 @@ export function WritingChart() {
     const onPointerDown = (event: Event) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setSelected(null);
+        setHovered(null);
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -452,7 +498,7 @@ export function WritingChart() {
     return [...new Set(values)];
   }, [yAxis, targetDomain]);
 
-  const active = hovered ?? selected;
+  const active = selected ?? hovered;
   const dimmed = (seriesIndex: number) => {
     if (!active) return 1;
     if (type === "pie") return active.series === seriesIndex ? 1 : 0.35;
@@ -463,12 +509,23 @@ export function WritingChart() {
     setSelected(
       seriesLevel ? {series: mark.series, category: mark.category} : mark,
     );
+    setHovered(null);
+  };
+
+  const previewHover = (mark: ActiveMark | null) => {
+    if (selected) return;
+    setHovered(mark);
+  };
+
+  const clearFocus = () => {
+    setSelected(null);
+    setHovered(null);
   };
 
   const onChartPointerDown = (event: PointerEvent<SVGSVGElement>) => {
     const target = event.target as Element | null;
     if (!target?.closest("[data-chart-mark]")) {
-      setSelected(null);
+      clearFocus();
     }
   };
 
@@ -478,9 +535,26 @@ export function WritingChart() {
     ? `${CHART_TYPES.find((item) => item.value === type)?.label} chart of weekly activity for ${visibleCount} series, shown as percentages${yAxis === "zoomed" ? " with a zoomed y-axis and break" : ""}.`
     : `Donut chart showing the share of weekly activity across ${visibleCount} slices.`;
 
-  const tooltip = {width: 80, height: 40, font: 24};
-
-  const bars = barLayout(visibleCount);
+  const barLayoutCount = useTweenedNumber(visibleCount, 160);
+  const tooltipAnchors = (() => {
+    if (type === "pie" || !active) return [];
+    const x =
+      type === "scatter"
+        ? scatterX(active.category, active.series, visibleCount)
+        : type === "bar"
+          ? barX(active.category, active.series, barLayoutCount) +
+            barWidth(barLayoutCount) / 2
+          : categoryX(active.category);
+    const y = plotY(SERIES_VALUES[active.series][active.category]);
+    return [
+      {
+        key: "value",
+        left: `${(x / VIEW_W) * 100}%`,
+        top: `${(y / VIEW_H) * 100}%`,
+        value: SERIES_VALUES[active.series][active.category],
+      },
+    ];
+  })();
 
   return (
     <section
@@ -489,7 +563,7 @@ export function WritingChart() {
       className="writing-chart w-full"
       onPointerDown={(event) => {
         if (!(event.target as Element).closest("[data-chart-mark]")) {
-          setSelected(null);
+          clearFocus();
         }
       }}
     >
@@ -514,6 +588,9 @@ export function WritingChart() {
           options={CHART_TYPES}
           onChange={(next) => {
             setType(next);
+            if (next === "pie" && seriesCount < 2) {
+              setSeriesCount(2);
+            }
             setHovered(null);
             setSelected(null);
           }}
@@ -544,7 +621,7 @@ export function WritingChart() {
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg bg-white px-10 py-10 max-[700px]:px-6 max-[700px]:py-6 max-[420px]:px-4 max-[420px]:py-4">
+      <div className="mt-4 rounded-lg bg-white px-10 py-10 max-[700px]:px-6 max-[700px]:py-6 max-[420px]:px-4 max-[420px]:py-4">
         <h2 id={titleId} className="sr-only">
           {title}
         </h2>
@@ -585,6 +662,7 @@ export function WritingChart() {
           </ul>
         ) : null}
 
+        <div className="relative">
         <svg
           role="img"
           viewBox={`0 0 ${VIEW_W} ${cartesian ? VIEW_H : VIEW_H_DONUT}`}
@@ -600,16 +678,15 @@ export function WritingChart() {
             <CartesianChart
               type={type}
               visibleCount={visibleCount}
+              layoutCount={barLayoutCount}
               axisTicks={axisTicks}
               plotY={plotY}
               baseline={baseline}
               breakSize={scale.breakSize}
-              bars={bars}
-              tooltip={tooltip}
               dimmed={dimmed}
               hovered={hovered}
               selected={selected}
-              setHovered={setHovered}
+              setHovered={previewHover}
               selectMark={selectMark}
             />
           ) : (
@@ -618,11 +695,22 @@ export function WritingChart() {
               visibleCount={visibleCount}
               active={active}
               dimmed={dimmed}
-              setHovered={setHovered}
+              setHovered={previewHover}
               selectMark={selectMark}
             />
           )}
         </svg>
+        {tooltipAnchors.map((anchor) => (
+          <div
+            key={anchor.key}
+            aria-hidden
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] whitespace-nowrap rounded-md border border-[#D1DCE2] bg-white px-2.5 py-1 text-[16px] font-bold leading-none text-[#0D2126] shadow-[0_1px_2px_rgba(13,33,38,0.08)]"
+            style={{left: anchor.left, top: anchor.top}}
+          >
+            {formatPercent(anchor.value)}
+          </div>
+        ))}
+        </div>
       </div>
     </section>
   );
@@ -631,12 +719,11 @@ export function WritingChart() {
 function CartesianChart({
   type,
   visibleCount,
+  layoutCount,
   axisTicks,
   plotY,
   baseline,
   breakSize,
-  bars,
-  tooltip,
   dimmed,
   hovered,
   selected,
@@ -645,12 +732,11 @@ function CartesianChart({
 }: {
   type: ChartType;
   visibleCount: number;
+  layoutCount: number;
   axisTicks: number[];
   plotY: (value: number) => number;
   baseline: number;
   breakSize: number;
-  bars: {width: number; group: number};
-  tooltip: {width: number; height: number; font: number};
   dimmed: (series: number) => number;
   hovered: ActiveMark | null;
   selected: ActiveMark | null;
@@ -658,7 +744,12 @@ function CartesianChart({
   selectMark: (mark: ActiveMark, seriesLevel: boolean) => void;
 }) {
   const breakY = PLOT_BOTTOM - breakSize / 2;
-  const tooltipMark = hovered ?? selected;
+  const renderCount = Math.max(
+    visibleCount,
+    Math.ceil(layoutCount - 0.001),
+  );
+  const width = barWidth(layoutCount);
+  const focus = selected ?? hovered;
 
   return (
     <g>
@@ -764,21 +855,19 @@ function CartesianChart({
       </text>
 
       {type === "bar"
-        ? Array.from({length: visibleCount}, (_, series) =>
+        ? Array.from({length: renderCount}, (_, series) =>
             CATEGORIES.map((label, category) => {
               const value = SERIES_VALUES[series][category];
-              const x =
-                categoryX(category) -
-                bars.group / 2 +
-                series * (bars.width + BAR_GAP);
+              const x = barX(category, series, layoutCount);
               const y = plotY(value);
               const height = Math.max(0, PLOT_BOTTOM - y);
+              const appear = clamp(layoutCount - series, 0, 1);
               return (
                 <rect
                   key={`${series}-${label}`}
                   data-chart-mark=""
                   role="button"
-                  tabIndex={0}
+                  tabIndex={appear > 0.05 ? 0 : -1}
                   aria-pressed={
                     selected?.series === series &&
                     selected.category === category
@@ -786,13 +875,12 @@ function CartesianChart({
                   aria-label={`${SERIES_NAMES[series]}, ${label}, ${formatPercent(value)}`}
                   x={x}
                   y={y}
-                  width={bars.width}
+                  width={Math.max(width, 0)}
                   height={height}
                   rx={2}
                   fill={SERIES_COLORS[series]}
-                  opacity={dimmed(series)}
+                  opacity={dimmed(series) * appear}
                   className="writing-chart-mark"
-                  style={{transition: "opacity 200ms ease"}}
                   onPointerEnter={() => setHovered({series, category})}
                   onPointerLeave={() => setHovered(null)}
                   onFocus={() => setHovered({series, category})}
@@ -832,7 +920,7 @@ function CartesianChart({
                 />
                 {points.map((point, category) => {
                   const focused =
-                    hovered?.series === series && hovered.category === category;
+                    focus?.series === series && focus.category === category;
                   return (
                     <circle
                       key={`${series}-${category}`}
@@ -897,7 +985,7 @@ function CartesianChart({
                 ) : null}
                 {points.map((point, category) => {
                   const focused =
-                    hovered?.series === series && hovered.category === category;
+                    focus?.series === series && focus.category === category;
                   return (
                     <circle
                       key={`${series}-${category}`}
@@ -929,24 +1017,6 @@ function CartesianChart({
             );
           })
         : null}
-
-      {tooltipMark && type !== "pie" ? (
-        <ValueTooltip
-          x={
-            type === "scatter"
-              ? scatterX(tooltipMark.category, tooltipMark.series, visibleCount)
-              : type === "bar"
-                ? categoryX(tooltipMark.category) -
-                  bars.group / 2 +
-                  tooltipMark.series * (bars.width + BAR_GAP) +
-                  bars.width / 2
-                : categoryX(tooltipMark.category)
-          }
-          y={plotY(SERIES_VALUES[tooltipMark.series][tooltipMark.category])}
-          value={SERIES_VALUES[tooltipMark.series][tooltipMark.category]}
-          tooltip={tooltip}
-        />
-      ) : null}
 
     </g>
   );
@@ -985,7 +1055,17 @@ function DonutChart({
     <g>
       {orderedSlices.map((slice) => {
         const selected = active?.series === slice.series;
-        const label = polar(
+        const [innerX, innerY] = polar(
+          DONUT.cx,
+          DONUT.cy,
+          DONUT.inner,
+          slice.mid,
+        );
+        const explode = selected ? 16 : 0;
+        const scale = selected ? 1.05 : 1;
+        const dx = Math.cos(slice.mid) * explode;
+        const dy = Math.sin(slice.mid) * explode;
+        const [labelX, labelY] = polar(
           DONUT.cx,
           DONUT.cy,
           (DONUT.outer + DONUT.inner) / 2,
@@ -994,15 +1074,10 @@ function DonutChart({
         return (
           <g
             key={SERIES_NAMES[slice.series]}
-            transform={
-              selected
-                ? `translate(${DONUT.cx} ${DONUT.cy}) scale(1.05) translate(${-DONUT.cx} ${-DONUT.cy})`
-                : undefined
-            }
             style={{
               opacity: dimmed(slice.series),
+              transform: `translate(${dx}px, ${dy}px) translate(${innerX}px, ${innerY}px) scale(${scale}) translate(${-innerX}px, ${-innerY}px)`,
               transition: "opacity 200ms ease, transform 220ms ease",
-              transformOrigin: `${DONUT.cx}px ${DONUT.cy}px`,
             }}
           >
             <path
@@ -1032,12 +1107,12 @@ function DonutChart({
               }
             />
             <text
-              x={label[0]}
-              y={label[1]}
+              x={labelX}
+              y={labelY}
               textAnchor="middle"
               dominantBaseline="middle"
               fill={WHITE}
-              fontSize={20}
+              fontSize={28}
               fontWeight={700}
               pointerEvents="none"
             >
@@ -1047,49 +1122,6 @@ function DonutChart({
         );
       })}
 
-    </g>
-  );
-}
-
-function ValueTooltip({
-  x,
-  y,
-  value,
-  tooltip,
-}: {
-  x: number;
-  y: number;
-  value: number;
-  tooltip: {width: number; height: number; font: number};
-}) {
-  const width = tooltip.width;
-  const height = tooltip.height;
-  const left = clamp(x - width / 2, PLOT_LEFT, PLOT_RIGHT - width);
-  const top = y - height - 12 < 8 ? y + 14 : y - height - 12;
-
-  return (
-    <g pointerEvents="none">
-      <rect
-        x={left}
-        y={top}
-        width={width}
-        height={height}
-        rx={4}
-        fill={WHITE}
-        stroke={STEEL}
-        strokeWidth={1}
-      />
-      <text
-        x={left + width / 2}
-        y={top + height / 2}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={NAVY}
-        fontSize={tooltip.font}
-        fontWeight={700}
-      >
-        {formatPercent(value)}
-      </text>
     </g>
   );
 }
