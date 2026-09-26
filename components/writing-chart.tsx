@@ -709,7 +709,7 @@ export function WritingChart() {
           <div
             key={anchor.key}
             aria-hidden
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] whitespace-nowrap rounded-md border border-[#D1DCE2] bg-white px-2.5 py-1 text-[16px] font-bold leading-none text-[#0D2126] shadow-[0_1px_2px_rgba(13,33,38,0.08)]"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+8px)] whitespace-nowrap rounded-md border border-[#D1DCE2] bg-white px-2.5 py-1 text-[14px] font-bold leading-none text-[#0D2126] shadow-[0_1px_2px_rgba(13,33,38,0.08)]"
             style={{left: anchor.left, top: anchor.top}}
           >
             {formatPercent(anchor.value)}
@@ -1117,7 +1117,7 @@ function DonutChart({
               textAnchor="middle"
               dominantBaseline="middle"
               fill={WHITE}
-              fontSize={28}
+              fontSize={24}
               fontWeight={700}
               pointerEvents="none"
             >
