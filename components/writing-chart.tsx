@@ -54,7 +54,6 @@ const PIE_SHARES = [32, 24, 18, 16, 10] as const;
 
 const VIEW_W = 1120;
 const VIEW_H = 680;
-const VIEW_H_DONUT = 620;
 const PLOT_LEFT = 128;
 const PLOT_RIGHT = 1088;
 const PLOT_TOP = 32;
@@ -626,47 +625,55 @@ export function WritingChart() {
           {title}
         </h2>
 
-        {visibleCount > 1 ? (
-          <ul
-            aria-hidden
-            className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#526068]"
-          >
-            {Array.from({length: visibleCount}, (_, series) => (
-              <li
-                key={SERIES_NAMES[series]}
-                className="flex items-center gap-2"
-                style={{opacity: dimmed(series)}}
-              >
-                {type === "line" ? (
-                  <span className="relative flex h-2.5 w-5 items-center">
+        <ul
+          aria-hidden
+          className="mb-4 flex min-h-5 flex-wrap items-center gap-x-5 gap-y-2 text-[13px] leading-5 text-[#526068]"
+        >
+          {visibleCount > 1
+            ? Array.from({length: visibleCount}, (_, series) => (
+                <li
+                  key={SERIES_NAMES[series]}
+                  className="flex items-center gap-2"
+                  style={{opacity: dimmed(series)}}
+                >
+                  {type === "line" ? (
+                    <span className="relative flex h-2.5 w-5 items-center">
+                      <span
+                        className="absolute inset-x-0 h-0.5 rounded-full"
+                        style={{background: SERIES_COLORS[series]}}
+                      />
+                      <span
+                        className="relative mx-auto size-2 rounded-full bg-white"
+                        style={{boxShadow: `inset 0 0 0 1.5px ${SERIES_COLORS[series]}`}}
+                      />
+                    </span>
+                  ) : (
                     <span
-                      className="absolute inset-x-0 h-0.5 rounded-full"
+                      className={`size-2.5 shrink-0 ${type === "scatter" ? "rounded-full" : "rounded-[2px]"}`}
                       style={{background: SERIES_COLORS[series]}}
                     />
-                    <span
-                      className="relative mx-auto size-2 rounded-full bg-white"
-                      style={{boxShadow: `inset 0 0 0 1.5px ${SERIES_COLORS[series]}`}}
-                    />
-                  </span>
-                ) : (
-                  <span
-                    className={`size-2.5 shrink-0 ${type === "scatter" ? "rounded-full" : "rounded-[2px]"}`}
-                    style={{background: SERIES_COLORS[series]}}
-                  />
-                )}
-                {type === "pie" ? PIE_SHARES[series] : SERIES_NAMES[series]}
+                  )}
+                  {type === "pie" ? PIE_SHARES[series] : SERIES_NAMES[series]}
+                </li>
+              ))
+            : (
+              <li className="invisible flex items-center gap-2">
+                <span className="size-2.5 shrink-0 rounded-[2px]" />
+                Series
               </li>
-            ))}
-          </ul>
-        ) : null}
+            )}
+        </ul>
 
-        <div className="relative">
+        <div
+          className="relative w-full"
+          style={{aspectRatio: `${VIEW_W} / ${VIEW_H}`}}
+        >
         <svg
           role="img"
-          viewBox={`0 0 ${VIEW_W} ${cartesian ? VIEW_H : VIEW_H_DONUT}`}
+          viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           preserveAspectRatio="xMidYMid meet"
           aria-labelledby={descId}
-          className="block w-full"
+          className="absolute inset-0 block h-full w-full"
           style={{fontFamily: "inherit"}}
           onPointerDown={onChartPointerDown}
         >
