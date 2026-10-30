@@ -8,7 +8,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "sanity dev --port 3333",
+    "dev": "node ../scripts/dev-server.mjs 3333 sanity dev",
     "start": "sanity start",
     "build": "sanity build",
     "deploy": "sanity deploy",

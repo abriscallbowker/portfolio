@@ -8,14 +8,21 @@ export function AboutBio() {
         <p className="flex flex-wrap items-center">
           Product Designer
           at
-          <Image
-            src="/icons/prax.webp"
-            alt=""
-            width={18}
-            height={18}
-            className="ml-[8px] mr-1.5 size-[18px] shrink-0 rounded-[4px] object-cover"
-          />
-          Prax Industries.
+          <a
+            href="https://prax.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-[8px] inline-flex items-center gap-1.5 transition-opacity hover:opacity-60 focus-visible:opacity-60"
+          >
+            <Image
+              src="/icons/prax.webp"
+              alt=""
+              width={18}
+              height={18}
+              className="size-[18px] shrink-0 rounded-[4px] object-cover"
+            />
+            Prax Industries.
+          </a>
         </p>
         <p>Previously worked at Caura and JPMorgan.</p>
         <p>Also ran the product studio Visual Binary.</p>
