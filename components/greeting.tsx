@@ -4,7 +4,7 @@ import {useGreetingReveal} from "@/components/greeting-reveal";
 import {useReducedMotion} from "motion/react";
 import {useEffect, useState} from "react";
 
-const NAME = "I'm Alex BB.";
+const NAME = "I'm Alex Bowker.";
 
 export const greetingReveal = {
   stagger: 0.035,
