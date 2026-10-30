@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  isShowcasePath,
   isWritingListPath,
   usePreviousPathname,
-  useShowcaseReturn,
 } from "@/components/route-history";
 import {HomeIcon, TabBar} from "@/components/tab-bar";
 import {useRouter} from "next/navigation";
@@ -36,18 +34,11 @@ export function NavControl({
   const router = useRouter();
   const mounted = useSyncExternalStore(subscribeToClient, clientSnapshot, serverSnapshot);
   const previousPathname = usePreviousPathname();
-  const {returnCardId} = useShowcaseReturn();
-  // Home returns to the writing tab if that's where the article was
-  // opened from. Showcase wins only when the previous page was the
-  // gallery (or a card click stored a return id) and they did not come
-  // through the writing list.
+  // Only an article opened from Writing returns there. Direct visits and
+  // articles opened from Showcase use the default home destination.
   const cameFromWriting = icon === "home" && isWritingListPath(previousPathname);
-  const cameFromShowcase =
-    icon === "home" &&
-    !cameFromWriting &&
-    (isShowcasePath(previousPathname) || Boolean(returnCardId));
-  const href = cameFromShowcase ? "/" : defaultHref;
-  const label = cameFromShowcase ? "Back to showcase" : defaultLabel;
+  const href = cameFromWriting ? "/writing" : defaultHref;
+  const label = cameFromWriting ? "Writing" : defaultLabel;
   const shortcut = shortcutForIcon[icon];
   const [scrolled, setScrolled] = useState(false);
 

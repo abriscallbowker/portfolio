@@ -73,7 +73,7 @@ export default async function WritingPage({
 
   return (
     <div className="flex min-h-full flex-col">
-      <NavControl href="/writing" label="Writing" icon="home" position="left" />
+      <NavControl href="/" label="Back to showcase" icon="home" position="left" />
       <AppearFade delay={0} className="flex flex-1 flex-col">
         <main className="flex flex-1 flex-col items-center pb-16 pt-24">
           <article className="site-column flex w-full flex-col gap-8 px-4">
