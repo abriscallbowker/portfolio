@@ -184,7 +184,7 @@ body {
   position: absolute;
   pointer-events: none;
   inset: 0 -30px 0 0;
-  background-image: radial-gradient(circle, #999 0.6px, transparent 0.85px);
+  background-image: radial-gradient(circle, rgb(153 153 153 / 0.25) 0.6px, transparent 0.85px);
   background-size: 3px 3px;
   animation: media-ghost-drift 3s linear infinite;
 }
