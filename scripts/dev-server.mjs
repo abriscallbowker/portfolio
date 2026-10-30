@@ -44,7 +44,11 @@ async function main() {
   const [startPort, command, ...args] = process.argv.slice(2);
   if (!command) throw new Error("Usage: dev-server.mjs <port> <command> [args...]");
 
-  const port = await findAvailablePort(Number(startPort));
+  // The combined launcher passes its workspace-specific port explicitly.
+  const portIndex = args.indexOf("--port");
+  const requestedPort = portIndex >= 0 ? args[portIndex + 1] : startPort;
+  if (portIndex >= 0) args.splice(portIndex, 2);
+  const port = await findAvailablePort(Number(requestedPort));
   console.log(`[dev] ${command}: using port ${port}`);
   const child = spawn(command, [...args, "--port", String(port)], {
     stdio: "inherit",

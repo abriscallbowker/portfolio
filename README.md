@@ -25,9 +25,14 @@ pnpm dev
 bun dev
 ```
 
-The portfolio starts at port 3000 and Sanity Studio at port 3333. If a port is in use, each server increments to the next available port and prints its selected port in the terminal. This also applies when running `npm run dev:app`, `npm run dev:studio`, or `npm run dev --prefix cms` separately.
+Open the Portfolio URL printed in your terminal. `npm run dev` starts both the
+portfolio and Sanity Studio on available ports. In Conductor it uses the workspace's
+allocated `CONDUCTOR_PORT` range; elsewhere it searches from ports 3000 and 3333,
+skipping ports already in use.
 
-Open the portfolio URL printed in the terminal (normally [http://localhost:3000](http://localhost:3000)) with your browser to see the result.
+The standalone commands `npm run dev:app`, `npm run dev:studio`, and
+`npm run dev --prefix cms` also select available ports, starting from 3000 for
+the portfolio and 3333 for Studio.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

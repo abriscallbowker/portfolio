@@ -45,6 +45,18 @@ test("rejects invalid starting ports", async () => {
   }
 });
 
+test("uses an explicit --port from the combined launcher instead of the default", async (t) => {
+  const busyPort = await occupyPort(t);
+  const defaultPort = await findAvailablePort(busyPort);
+  const requestedPort = await findAvailablePort(defaultPort + 1);
+  const {stdout} = await exec(process.execPath, [
+    launcher, String(busyPort), process.execPath,
+    "-e", "console.log(JSON.stringify(process.argv.slice(1)))", "--",
+    "--port", String(requestedPort),
+  ]);
+  assert.ok(stdout.includes(JSON.stringify(["--port", String(requestedPort)])));
+});
+
 for (const host of ["127.0.0.1", "0.0.0.0", "::1", "::"]) {
   test(`skips ports occupied on ${host}`, async (t) => {
     let port;
