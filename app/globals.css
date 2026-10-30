@@ -320,7 +320,7 @@ body:has(.about-footer) .progressive-blur-wrap--bottom {
 .showcase-carousel {
   /* Constrained view: cards hard-clip at the inner view's boundary (the
      overflow-x-clip element inside) and the edge blur strips overhang it. */
-  max-width: min(1000px, 86vw);
+  max-width: min(900px, 80vw);
 }
 
 /* Progressive blur at the clipped edges: two stacked backdrop-blur layers

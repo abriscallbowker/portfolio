@@ -25,7 +25,10 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the Portfolio URL printed in your terminal. `npm run dev` starts both the
+portfolio and Sanity Studio on available ports. In Conductor it uses the workspace's
+allocated `CONDUCTOR_PORT` range; elsewhere it searches from ports 3000 and 3333,
+skipping ports already in use.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

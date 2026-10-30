@@ -6,8 +6,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "concurrently -k -n app,studio -c cyan,magenta \"next dev --port 3000\" \"npm run dev --prefix cms\"",
-    "dev:app": "next dev --port 3000",
+    "dev": "node scripts/dev.mjs",
+    "dev:app": "next dev",
     "dev:studio": "npm run dev --prefix cms",
     "build": "next build",
     "start": "next start",
