@@ -30,6 +30,10 @@ portfolio and Sanity Studio on available ports. In Conductor it uses the workspa
 allocated `CONDUCTOR_PORT` range; elsewhere it searches from ports 3000 and 3333,
 skipping ports already in use.
 
+The standalone commands `npm run dev:app`, `npm run dev:studio`, and
+`npm run dev --prefix cms` also select available ports, starting from 3000 for
+the portfolio and 3333 for Studio.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:app": "next dev",
+    "dev:app": "node scripts/dev-server.mjs 3000 next dev",
     "dev:studio": "npm run dev --prefix cms",
     "build": "next build",
     "start": "next start",
