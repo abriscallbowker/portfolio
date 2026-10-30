@@ -2,6 +2,9 @@
   "name": "portfolio",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "concurrently -k -n app,studio -c cyan,magenta \"next dev --port 3000\" \"npm run dev --prefix cms\"",
     "dev:app": "next dev --port 3000",
@@ -14,10 +17,10 @@
     "@heroicons/react": "^2.2.0",
     "@sanity/image-url": "^2.1.1",
     "motion": "^13.1.0",
-    "next": "16.3.1",
+    "next": "16.4.3",
     "next-sanity": "^13.3.3",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -26,9 +29,18 @@
     "@types/react-dom": "^19",
     "concurrently": "^10.0.5",
     "eslint": "^9",
-    "eslint-config-next": "16.3.1",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@11.15.1+sha512.81350b07e53c9538a02f1f2303b4290fa2d7be04e56e2a970c4cc4b417dc761de196edabd49d55c7dc9580db81007c44143e4e3d7e462b3000d23c255122d065"
+  "packageManager": "pnpm@11.15.1+sha512.81350b07e53c9538a02f1f2303b4290fa2d7be04e56e2a970c4cc4b417dc761de196edabd49d55c7dc9580db81007c44143e4e3d7e462b3000d23c255122d065",
+  "overrides": {
+    "@vercel/frameworks": {
+      "js-yaml": "^3.15.2",
+      "smol-toml": "^1.9.1"
+    },
+    "@module-federation/dts-plugin": {
+      "undici": "^7.30.1"
+    }
+  }
 }

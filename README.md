@@ -6,6 +6,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Use Node.js 22.12 or later. Install both the portfolio and Studio dependencies:
+
+```bash
+npm ci
+npm ci --prefix cms
+```
+
 First, run the development server:
 
 ```bash
