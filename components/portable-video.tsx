@@ -16,6 +16,7 @@ function Video({src, alt}: {src: string; alt?: string}) {
     if (!el) return;
 
     el.muted = true;
+    let inView = false;
     let frameId: number | undefined;
     const hasFrameCallback = typeof el.requestVideoFrameCallback === "function";
     const markReady = () => setReady(true);
@@ -26,6 +27,7 @@ function Video({src, alt}: {src: string; alt?: string}) {
       }
     };
     const play = () => {
+      if (!inView) return;
       void el.play().catch(() => {
         // Autoplay can be blocked in low-power mode. A decoded still frame
         // is ready to display even when playback cannot start.
@@ -35,10 +37,22 @@ function Video({src, alt}: {src: string; alt?: string}) {
 
     if (hasFrameCallback) frameId = el.requestVideoFrameCallback(markReady);
     onLoadedData();
-    play();
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      if (inView) {
+        el.currentTime = 0;
+        play();
+      } else {
+        el.pause();
+      }
+    });
+    observer.observe(el);
     el.addEventListener("loadeddata", onLoadedData);
     el.addEventListener("canplay", play);
     return () => {
+      inView = false;
+      observer.disconnect();
+      el.pause();
       if (frameId !== undefined) el.cancelVideoFrameCallback(frameId);
       el.removeEventListener("loadeddata", onLoadedData);
       el.removeEventListener("canplay", play);
@@ -50,7 +64,6 @@ function Video({src, alt}: {src: string; alt?: string}) {
       <video
         ref={ref}
         src={src}
-        autoPlay
         muted
         loop
         playsInline
