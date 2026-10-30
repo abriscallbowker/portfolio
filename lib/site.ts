@@ -1,5 +1,5 @@
 export const site = {
-  name: "Alex BB",
+  name: "Alex Bowker",
   fullName: "Alex Briscall Bowker",
   description: "Writing about product design, creativity, and more.",
   url: "https://alexbowker.com",
