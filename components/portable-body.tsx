@@ -1,6 +1,6 @@
 import {BodyLink} from "@/components/body-link";
+import {PortableImage as WritingImage} from "@/components/portable-image";
 import {PortableVideo} from "@/components/portable-video";
-import Image from "next/image";
 import {PortableText, type PortableTextComponents} from "next-sanity";
 import {urlFor} from "@/sanity/lib/image";
 
@@ -111,15 +111,11 @@ const components: PortableTextComponents = {
       return (
         <figure className="flex flex-col gap-2">
           <div className="overflow-hidden">
-            <Image
+            <WritingImage
               src={urlFor(value).width(1600).url()}
               alt={alt}
               width={width}
               height={height}
-              className="h-auto w-full"
-              placeholder={value.asset.metadata?.lqip ? "blur" : "empty"}
-              blurDataURL={value.asset.metadata?.lqip}
-              sizes="(min-width: 640px) 640px, 100vw"
             />
           </div>
           <MediaCaption caption={value.caption} />
