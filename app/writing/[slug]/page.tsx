@@ -3,6 +3,8 @@ import {NavControl} from "@/components/nav-control";
 import {PortableBody} from "@/components/portable-body";
 import {WritingChart} from "@/components/writing-chart";
 import {WritingList} from "@/components/writing-list";
+import {WritingHeadingNav} from "@/components/writing-heading-nav";
+import {getWritingHeadings} from "@/lib/writing-headings";
 import {formatArticleDate} from "@/lib/dates";
 import {site} from "@/lib/site";
 import {wordCount} from "@/lib/word-count";
@@ -74,6 +76,7 @@ export default async function WritingPage({
   return (
     <div className="flex min-h-full flex-col">
       <NavControl href="/" label="Back to showcase" icon="home" position="left" />
+      <WritingHeadingNav key={slug} headings={getWritingHeadings(article.body)} />
       <AppearFade delay={0} className="flex flex-1 flex-col">
         <main className="flex flex-1 flex-col items-center pb-16 pt-24">
           <article className="site-column flex w-full flex-col gap-8 px-4">
@@ -94,7 +97,7 @@ export default async function WritingPage({
             {article.slug === "charts" ? <WritingChart /> : null}
             <PortableBody value={article.body} />
           </article>
-          <section className="site-column mt-16 flex w-full flex-col gap-4">
+          <section id="writing-more" className="site-column mt-16 flex w-full flex-col gap-4">
             <div className="px-4">
               <p className="text-overline text-subdued">More</p>
             </div>
