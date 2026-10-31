@@ -67,7 +67,10 @@ function ScrollToTop() {
   }, []);
 
   useLayoutEffect(() => {
-    if (isShowcasePath(pathname)) {
+    const isWritingDetail =
+      firstSegment(pathname) === "writing" && isArticlePath(pathname);
+
+    if (isShowcasePath(pathname) || isWritingDetail) {
       isFirstNavigation.current = false;
       const resetScroll = () => {
         const top =
