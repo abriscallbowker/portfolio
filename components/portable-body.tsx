@@ -3,6 +3,7 @@ import {PortableImage as WritingImage} from "@/components/portable-image";
 import {PortableVideo} from "@/components/portable-video";
 import {PortableText, type PortableTextComponents} from "next-sanity";
 import {urlFor} from "@/sanity/lib/image";
+import {getWritingHeading} from "@/lib/writing-headings";
 
 type PortableImage = {
   _type: "image";
@@ -50,20 +51,23 @@ const components: PortableTextComponents = {
     normal: ({children}) => (
       <p className="text-body-md text-ink">{children}</p>
     ),
-    h1: ({children}) => (
-      <h1 className="mt-16 text-portable-h1 text-ink first:mt-0">{children}</h1>
+    h1: ({children, value}) => (
+      <h1 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-16 text-portable-h1 text-ink first:mt-0">{children}</h1>
     ),
-    h2: ({children}) => (
-      <h2 className="mt-14 text-portable-h2 text-ink first:mt-0">{children}</h2>
+    h2: ({children, value}) => (
+      <h2 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-14 text-portable-h2 text-ink first:mt-0">{children}</h2>
     ),
-    h3: ({children}) => (
-      <h3 className="mt-12 text-portable-h3 text-ink first:mt-0">{children}</h3>
+    h3: ({children, value}) => (
+      <h3 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-12 text-portable-h3 text-ink first:mt-0">{children}</h3>
     ),
-    h4: ({children}) => (
-      <h4 className="mt-10 text-portable-h4 text-ink first:mt-0">{children}</h4>
+    h4: ({children, value}) => (
+      <h4 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-10 text-portable-h4 text-ink first:mt-0">{children}</h4>
     ),
-    h5: ({children}) => (
-      <h5 className="mt-8 text-portable-h5 text-ink first:mt-0">{children}</h5>
+    h5: ({children, value}) => (
+      <h5 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-8 text-portable-h5 text-ink first:mt-0">{children}</h5>
+    ),
+    h6: ({children, value}) => (
+      <h6 id={getWritingHeading(value)?.id} tabIndex={-1} className="writing-anchor mt-8 text-portable-h5 text-ink first:mt-0">{children}</h6>
     ),
     blockquote: ({children}) => (
       <blockquote className="border-l-2 border-border pl-4 text-body-md text-subdued">
