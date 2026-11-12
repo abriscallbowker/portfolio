@@ -577,8 +577,8 @@ export function ShowcaseCarousel({
     let closestParent: HTMLElement | null = null;
     let closestDist = Infinity;
 
-    cardRefs.current.forEach((el) => {
-      if (!el) return;
+    const projectedCards = cardRefs.current.flatMap((el) => {
+      if (!el) return [];
       const aspect = Number(el.dataset.aspect || PHONE_ASPECT);
       const parent = el.parentElement;
       const width = parent?.offsetWidth || opts.maxHeight * aspect;
@@ -599,16 +599,45 @@ export function ShowcaseCarousel({
       const translateZ = flatten
         ? 0
         : rotRadius * (Math.cos(theta) - 1) * 0.9 - overDist * 0.3;
-      const dxCap = Math.sign(dx) * Math.min(dist, capDist);
-      const translateX = flatten
-        ? 0
-        : (rotRadius * Math.sin(theta) - dxCap) * 0.85;
-      // Interactive hit-testing uses the card's rendered position (after
-      // the ring pull-in), not its raw track position. Painting stays on
-      // so a wrap that reveals another copy never flashes an unloaded
-      // visibility:hidden image.
-      const visualCenter = itemCenter + translateX;
-      const visualHalf = (width * scale) / 2 + DEPTH_PAD;
+      // Project both horizontal edges through the same perspective as CSS.
+      // Packing these edges avoids wider devices leaving larger empty gaps.
+      const projectEdge = (edge: number) => {
+        const localX = edge * scale;
+        const z = translateZ - localX * Math.sin(flatten ? 0 : theta);
+        return (localX * Math.cos(flatten ? 0 : theta)) / (1 - z / 1000);
+      };
+      const left = projectEdge(-width / 2);
+      const right = projectEdge(width / 2);
+      cursor += width + currentGap;
+      return [{ el, parent, itemCenter, dist, rotateY, scale, translateZ, left, right, packedCenter: 0 }];
+    });
+
+    let previous: (typeof projectedCards)[number] | undefined;
+    for (const card of projectedCards) {
+      card.packedCenter = previous
+        ? previous.packedCenter + previous.right + currentGap - card.left
+        : 0;
+      previous = card;
+    }
+
+    // Interpolate the anchor between the raw track centres. At a snap the
+    // selected card stays centred; during a drag the anchor changes smoothly,
+    // including when another loop copy enters the viewport.
+    let anchorOffset = 0;
+    if (projectedCards.length > 0) {
+      const afterIndex = projectedCards.findIndex((card) => card.itemCenter >= viewCenter);
+      const after = projectedCards[afterIndex < 0 ? projectedCards.length - 1 : afterIndex];
+      const before = projectedCards[Math.max(0, afterIndex < 0 ? projectedCards.length - 1 : afterIndex - 1)];
+      const span = after.itemCenter - before.itemCenter;
+      const progress = span > 0 ? Math.max(0, Math.min(1, (viewCenter - before.itemCenter) / span)) : 0;
+      anchorOffset = before.itemCenter - before.packedCenter
+        + progress * ((after.itemCenter - after.packedCenter) - (before.itemCenter - before.packedCenter));
+    }
+
+    projectedCards.forEach(({ el, parent, itemCenter, dist, rotateY, scale, translateZ, left, right, packedCenter }) => {
+      const visualCenter = packedCenter + anchorOffset;
+      const translateX = visualCenter - itemCenter;
+      const visualHalf = Math.max(Math.abs(left), Math.abs(right)) + DEPTH_PAD;
       const offscreen =
         visualCenter + visualHalf < 0 || visualCenter - visualHalf > viewWidth;
       const interactive = !offscreen;
@@ -618,7 +647,7 @@ export function ShowcaseCarousel({
       // buttons, which made the right-hand outer cards collapse.
       el.style.transform = flatten
         ? "none"
-        : `perspective(1000px) translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+        : `translateX(${translateX}px) perspective(1000px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
       el.style.pointerEvents = interactive ? "auto" : "none";
       // Strictly distance-ordered stacking so outer cards always sit
       // behind inner ones.
@@ -637,7 +666,6 @@ export function ShowcaseCarousel({
         closestParent = parent;
       }
 
-      cursor += width + currentGap;
     });
 
     cardRefs.current.forEach((el) => {
@@ -1125,7 +1153,7 @@ export function ShowcaseCarousel({
             blur strips can overhang the clip line; see .showcase-edge-blur. */}
         <div
           ref={containerRef}
-          className="relative flex h-full items-center overflow-x-clip"
+          className="showcase-viewport relative flex h-full items-center overflow-x-clip"
         >
           <ShowcaseTrack
             loopItems={loopItems}
