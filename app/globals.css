@@ -471,12 +471,34 @@ body:has(.about-footer) .progressive-blur-wrap--bottom {
 .showcase-carousel {
   /* Constrained view: cards hard-clip at the inner view's boundary (the
      overflow-x-clip element inside) and the edge blur strips overhang it. */
-  max-width: min(900px, 80vw);
+  max-width: min(820px, 76vw);
+}
+
+/* Fade the cards themselves as they approach the desktop clip boundary.
+   Keep the mask on the viewport so the overhanging blur can still sample
+   the page background beyond it. */
+@media (min-width: 1025px) {
+  .showcase-viewport {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 14%,
+      black 86%,
+      transparent
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 14%,
+      black 86%,
+      transparent
+    );
+  }
 }
 
 /* Progressive blur at the clipped edges: two stacked backdrop-blur layers
    per side, each masked with a linear gradient so the blur ramps up toward
-   the edge instead of the cards fading out.
+   the edge, complementing the desktop opacity fade.
 
    The strips overhang the view's clip line by --edge-blur-overhang because
    WebKit clamps a backdrop blur's sampling at the element's own boundary:
