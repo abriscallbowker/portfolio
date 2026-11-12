@@ -1,6 +1,5 @@
 import type {Metadata} from "next";
 import {Geist_Mono, Gochi_Hand, Inter} from "next/font/google";
-import {CustomCursor} from "@/components/custom-cursor";
 import {GreetingRevealProvider} from "@/components/greeting-reveal";
 import {MotionProvider} from "@/components/motion-provider";
 import {RouteHistoryProvider} from "@/components/route-history";
@@ -70,7 +69,6 @@ export default function RootLayout({children}: LayoutProps<"/">) {
         <MotionProvider>
           <GreetingRevealProvider>
             <RouteHistoryProvider>
-              <CustomCursor />
               <ViewportGlass />
               {children}
             </RouteHistoryProvider>

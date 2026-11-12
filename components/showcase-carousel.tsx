@@ -402,13 +402,7 @@ const ShowcaseTrack = memo(function ShowcaseTrack({
             data-id={item._id}
             data-linked={writingLink ? "true" : undefined}
             aria-label={item.title}
-            className={`showcase-card-slot relative shrink-0 bg-transparent p-0 ${
-              ZOOM_ENABLED ? "data-[current=true]:cursor-zoom-in" : ""
-            } ${
-              writingLink
-                ? "data-[current=true]:cursor-pointer"
-                : ""
-            }`}
+            className="showcase-card-slot relative shrink-0 cursor-pointer bg-transparent p-0"
             style={{ height: size.height, width: size.width }}
             onClick={(event) => {
               if (event.detail !== 0) return;

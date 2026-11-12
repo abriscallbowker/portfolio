@@ -25,7 +25,6 @@ function PhotoCard({
 }) {
   return (
     <motion.div
-      data-cursor="interactive"
       className={`${cardClassName} ${className}`}
       initial={false}
       animate={{rotate, scale: 1}}

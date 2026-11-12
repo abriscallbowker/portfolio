@@ -324,21 +324,6 @@ body {
   }
 }
 
-.custom-cursor {
-  display: none;
-}
-
-@media (min-width: 1200px) {
-  .has-custom-cursor .custom-cursor {
-    display: block;
-  }
-
-  .has-custom-cursor,
-  .has-custom-cursor * {
-    cursor: none !important;
-  }
-}
-
 .tab-bar,
 .home-button {
   display: flex;
