@@ -65,6 +65,13 @@ export function NavControl({
 
       const pressed =
         shortcut === "Escape" ? event.key === "Escape" : event.key.toLowerCase() === shortcut;
+      const returnToPreviousPage =
+        icon === "home" && event.key === "Escape" && previousPathname !== null;
+      if (returnToPreviousPage) {
+        event.preventDefault();
+        router.push(previousPathname, {scroll: false});
+        return;
+      }
       if (!pressed) return;
 
       event.preventDefault();
@@ -73,7 +80,7 @@ export function NavControl({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [href, router, shortcut]);
+  }, [href, icon, previousPathname, router, shortcut]);
 
   // Keep viewport positioning outside the article and its animation layers.
   // Only the inner link scales; the fixed shell keeps a stable compositor layer.
