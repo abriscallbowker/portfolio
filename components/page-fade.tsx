@@ -11,34 +11,22 @@ import {useContext, useRef, useState, type ReactNode} from "react";
 const tabSlideVariants = {
   enter: (direction: number) => ({opacity: 0, x: 32 * direction}),
   center: {opacity: 1, x: 0},
-  // Stay above the incoming page so text slides off the gallery
-  // instead of the cards flashing over the list. Absolute so a tall
-  // exiting page (Writing) doesn't keep the grid row — and the
-  // document — oversized until the fade finishes.
+  // Clear outgoing text quickly before the next tab enters.
   exit: (direction: number) => ({
     opacity: 0,
     x: -32 * direction,
     pointerEvents: "none" as const,
-    zIndex: 1,
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
+    transition: {duration: 0.12, ease: "easeOut"} as const,
   }),
 };
 
-// Gallery sits still when revealed. It still fades out immediately when
-// leaving so the imagery doesn't linger over incoming text tabs.
+// Keep the gallery stationary while fading between tabs.
 const showcaseSlideVariants = {
   enter: {opacity: 0, x: 0},
   center: {opacity: 1, x: 0},
   exit: {
     opacity: 0,
     pointerEvents: "none" as const,
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
     transition: {duration: 0.1, ease: "easeOut"} as const,
   },
 };
@@ -117,7 +105,9 @@ export function PageFade({children}: {children: ReactNode}) {
       style={{pointerEvents: ready ? undefined : "none"}}
     >
       <div className="relative grid w-full grid-cols-1 grid-rows-1 overflow-x-clip [overflow-anchor:none]">
-        <AnimatePresence custom={direction} mode="sync" initial={false}>
+        {/* Finish the exit before mounting the latest requested tab, including
+            when navigation changes again during an exit. */}
+        <AnimatePresence custom={direction} mode="wait" initial={false}>
           <motion.div
             key={segment ?? "showcase"}
             className="relative col-start-1 row-start-1 w-full"
