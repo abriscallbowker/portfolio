@@ -6,8 +6,7 @@ export function AboutBio() {
     <div className="flex flex-col gap-8 text-body-md text-ink">
       <div className="flex flex-col gap-5 px-4">
         <p className="flex flex-wrap items-center">
-          Product Designer
-          at
+          Lead Designer at
           <a
             href="https://prax.io"
             target="_blank"
